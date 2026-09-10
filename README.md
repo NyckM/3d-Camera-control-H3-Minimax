@@ -10,16 +10,9 @@ Ele **compila prompts, não embeddings de câmera**. Não existe adaptador geom�
 
 Não chama API, não baixa nada, não tem dependência Python além da biblioteca padrão.
 
-
-
 https://github.com/user-attachments/assets/a9b541e5-2b18-4f1d-8e16-37445b6dbac4
 
-
-
 https://github.com/user-attachments/assets/ea9af03e-2c8e-4589-abf0-9c002241aba2
-
-
-
 
 ---
 
@@ -81,6 +74,8 @@ Os botões escrevem nos widgets de verdade, então a escolha fica salva no workf
 
 ---
 
+https://github.com/user-attachments/assets/9bc415d7-1746-43db-a17c-72ea9722deda
+
 ## Widgets
 
 ### `camera_trajectory`
@@ -138,8 +133,6 @@ Os perfis de *character sheet* não são oferecidos: o upstream levanta erro se 
 O modo estendido tem quase o dobro de palavras. Prompt maior não é automaticamente melhor, então ele é opt-in: alterne só este widget na mesma trajetória para comparar.
 
 ---
-
-
 
 https://github.com/user-attachments/assets/0882bfde-9f62-4a1f-9bda-7da121dbe7e2
 

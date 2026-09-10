@@ -1,0 +1,25 @@
+[project]
+name = "comfyui-h3-camera-editor"
+description = "Planejador visual de camera para o MiniMax H3: orbita, elevacao, distancia e keyframes compilados em prompts, com saidas para H3 Edit e H3-World."
+version = "16.0.0"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = []
+keywords = [
+    "bruxosdovfx",
+    "bruxos-do-vfx",
+    "minimax",
+    "h3",
+    "camera",
+    "orbit",
+    "video",
+]
+
+[project.urls]
+Repository = "https://github.com/bruxosdovfx/ComfyUI-H3-Camera-Editor"
+
+[tool.comfy]
+PublisherId = "bruxosdovfx"
+DisplayName = "Camera H3 da Bruxos do VFX"
+Icon = "https://raw.githubusercontent.com/bruxosdovfx/ComfyUI-H3-Camera-Editor/main/web/logo.png"
+includes = []

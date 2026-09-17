@@ -636,34 +636,6 @@ Use `guide_prompt`, not the Freeze `minimax_prompt`, for the Camera Guide + Ref2
 
 ---
 
-## Formato do Camera Guide / Camera Guide format
-
-O guia usa:
-
-- RGB float32 frames
-- 24 fps
-- comprimento em padrão `17n + 5`
-- FOV visual fixo de 40°
-- proxy estático
-
-Os frames não incluem:
-
-- câmera visível
-- trajetória desenhada
-- textos
-- controles da interface
-
-Marcadores coloridos são opcionais e fazem parte do guia.  
-Colored markers are optional and are part of the guide.
-
-O guia representa **movimento de câmera**, não movimento do personagem.  
-The guide represents **camera motion**, not character motion.
-
-A ação do personagem continua vindo do prompt.  
-Character action still comes from the prompt.
-
----
-
 ## Principais controles / Main controls
 
 | Controle | PT | EN |
@@ -756,21 +728,6 @@ Ref2VA          Camera Prompt Compose
 
 ---
 
-## Performance do Camera Guide
-
-O render possui orçamento máximo de aproximadamente **32 milhões de pixels por lote**.  
-The renderer has an approximate maximum budget of **32 million pixels per batch**.
-
-Isso equivale a cerca de **384 MB** somente para frames RGB float32, além de temporários.  
-This is roughly **384 MB** for RGB float32 frames alone, plus temporary buffers.
-
-Para sequências longas, reduza a resolução.  
-For long sequences, reduce resolution.
-
-O processamento respeita o botão de interrupção do ComfyUI.  
-Processing respects ComfyUI's interrupt button.
-
----
 
 ## Limitações / Limitations
 
@@ -817,27 +774,7 @@ For comparisons, use the same seed, references, model and camera path.
 - Camera Guide é opcional. / Camera Guide is optional.
 - O editor mantém as saídas existentes e adiciona `camera_prompt`. / The editor preserves existing outputs and adds `camera_prompt`.
 - Nenhuma nova dependência é exigida pelo editor principal. / The main editor adds no new dependency.
-
-`Camera Guide Video` depende de APIs recentes do ComfyUI.  
-`Camera Guide Video` depends on newer ComfyUI APIs.
-
----
-
-## Validação / Validation
-
-```bash
-python -B tests/test_v23.py
-```
-
-Os testes validam estrutura e contratos de prompt.  
-Tests validate structure and prompt contracts.
-
-Eles não comprovam qualidade visual do H3.  
-They do not prove H3 visual quality.
-
-Compare Freeze / Action / Motion usando mesma imagem, modelo, seed e trajetória sempre que possível.  
-Compare Freeze / Action / Motion using the same image, model, seed and path whenever possible.
-
+  
 ---
 
 ## Documentação adicional / Additional documentation
@@ -847,25 +784,6 @@ Compare Freeze / Action / Motion using the same image, model, seed and path when
 - `INTEGRACAO-v26.md` — prompt / encoder integration
 - `EXPERIMENTS.md` — experimental version
 - `README-LEGACY.md` — historical documentation
-
----
-
-## Experimental
-
-A versão Experimental pode ficar instalada junto da principal.  
-The Experimental version can be installed alongside the main version.
-
-Pasta / Folder:
-
-```text
-3d-Camera-control-H3-Minimax-Experimental
-```
-
-Veja / See:
-
-```text
-EXPERIMENTS.md
-```
 
 ---
 
@@ -880,10 +798,6 @@ Baseado na integração H3 Edit de:
 
 Camera vocabulary follows MiniMax camera-control conventions.  
 O vocabulário de câmera segue as convenções de controle de câmera da MiniMax.
-
-Os presets de trajetória são adaptações manuais dos exemplos públicos de:
-
-`loopforge0/minimaxh3-shots-skills`
 
 As trajetórias foram reinterpretadas para os controles disponíveis no editor; personagens, cenários, áudio e prompts completos do projeto original não foram incorporados.  
 The paths were manually reinterpreted for the controls available in the editor; characters, scenes, audio and full prompts from the source project were not incorporated.

@@ -4,7 +4,7 @@ import math
 from . import camera as base
 from .diagnostics import review_path, diagnostic_text
 
-MODES = ['Freeze Frame', 'Motion Frame']
+MODES = ['Freeze Frame', 'Motion Frame', 'Action Frame']
 HELP = {
  'camera_trajectory': (
    'A trajetória da câmera em JSON, escrita pelo painel acima. Cada keyframe tem time de 0 a 1, azimuth e elevation '
@@ -103,6 +103,9 @@ HELP = {
    'complete. off disables it so you can compare tests side by side.'),
 }
 
+HELP['frame_mode'] = ('Freeze Frame congela a cena. Motion Frame preserva ação de vídeo com Ref2VA. Action Frame anima uma imagem usando a ação em instruction; use workflow nativo de imagem para vídeo. Freeze permanece o padrão.', 'Freeze Frame freezes the scene. Motion Frame preserves video action with Ref2VA. Action Frame animates an image using instruction; use a native image-to-video workflow. Freeze remains the default.')
+HELP['instruction'] = ('Descreva cena e ação. Em Action Frame este campo é obrigatório e aparece antes das instruções de câmera. Em Motion Frame descreva uma ação compatível com a referência.', 'Describe the scene and action. Required in Action Frame and placed before camera directions. In Motion Frame describe action consistent with the reference.')
+
 
 def help_text(name):
     pt,en=HELP[name]
@@ -116,7 +119,7 @@ def prepare_frames(images, mode, source_fps, freeze_index):
     if len(images.shape)!=4 or images.shape[0]<1 or images.shape[-1]!=3:
         raise ValueError('PT: Use frames RGB [N,H,W,3]. EN: Use RGB frames [N,H,W,3].')
     count=int(images.shape[0])
-    if mode=='Freeze Frame':
+    if mode in ('Freeze Frame', 'Action Frame'):
         if not 0<=freeze_index<count:
             raise ValueError('PT: freeze_index fora do lote. EN: freeze_index outside the batch.')
         first=images[freeze_index:freeze_index+1]
@@ -134,23 +137,48 @@ def prepare_frames(images, mode, source_fps, freeze_index):
     return frames[:1],frames,count
 
 def motion_plan(plan):
-    plan['frame_mode']='Motion Frame'
-    plan['reference']='Use <Video 1> as the temporal reference. Begin at its initial scene state and viewing angle. Preserve the sequence and timing of its actions while generating the requested new camera path.'
-    plan['preserve']='Preserve identities, objects, scene structure and the action progression of <Video 1>. People, fire, smoke, water and other moving elements continue their source actions. Do not freeze time, replay a single frame, or replace the action with an orbiting still.'
-    plan['forbid']='No cuts, temporal freezing, reversed playback, unrelated new actions, digital zoom or visible planning annotations. Do not rotate the subject as a substitute for moving the camera; preserve subject motion present in <Video 1>.'
-    plan['final']+=' Any camera hold holds only the viewpoint; the source action continues.'
-    plan['coordinate_anchor']['instruction']=plan['coordinate_anchor']['instruction'].replace('reference first frame','first frame of <Video 1>').replace('reference image','first frame of <Video 1>').replace('fixed orbit target','initial orbit target; track the same subject as its action progresses')
-    def replace(value):
-        if isinstance(value,str):
-            return value.replace('the subject itself stays stationary','the subject continues its source action').replace('fixed target','tracked subject target').replace('fixed orbit target','tracked subject target')
-        if isinstance(value,list):return [replace(v) for v in value]
-        if isinstance(value,dict):return {k:replace(v) for k,v in value.items()}
-        return value
-    return replace(plan)
+    """Apply temporal semantics only to generated fields; user prose stays untouched."""
+    action = plan['frame_mode'] == 'Action Frame'
+    reference = '<Picture 1>' if action else '<Video 1>'
+    plan['reference'] = (f'Use {reference} as the initial scene and identity reference. Animate the action described by the user while the camera follows its timeline.' if action else
+        'Use <Video 1> as the temporal reference. Preserve its action order and natural progression while changing the camera viewpoint. Do not compress or repeat the action to match camera keyframes.')
+    plan['preserve'] = ('Preserve character identity, appearance and scene coherence while allowing poses, expressions, contacts and positions to evolve with the action. Environmental motion continues naturally.' if action else
+        'Preserve identities, appearance and scene coherence, and continue the source actions of <Video 1>, including moving people and environmental elements.')
+    plan['forbid'] = 'One continuous shot. No cuts, temporal freezing, digital zoom or visible planning annotations. Camera rotation must not substitute for the requested subject action.'
+    plan['final'] = plan['final'].replace('final pose', 'final camera pose') + ' Camera holds and camera keyframes constrain only the viewpoint; the subject action continues through them.'
+    plan['instruction'] = plan['user_instruction'].strip()
+    for key in ('camera_choreography', 'coordinate_convention', 'rotation_direction'):
+        if key in plan:
+            plan[key] = plan[key].replace('the subject itself stays stationary', 'the subject continues its action independently').replace('fixed target', 'subject target').replace('do not rotate the subject instead', 'do not substitute subject rotation for camera motion; allow rotations required by the action')
+    for segment in plan['segments']:
+        segment['camera_mode'] = segment['camera_mode'].replace('the subject itself stays stationary', 'the subject continues its action independently').replace('fixed target', 'subject target')
+    plan['coordinate_anchor']['instruction'] = plan['coordinate_anchor']['instruction'].replace('fixed orbit target', 'initial subject target')
+    plan['coordinate_convention'] += ' The subject region identifies the initial target only; it does not lock body pose or world position. Follow the same subject as it moves.'
+    return plan
 
-def motion_text(plan,sections=False):
-    text=base.plan_text(plan,sections)
-    return text.replace('<Picture 1> is the exact reference first frame.','<Video 1> is the temporal action reference.').replace('<Picture 1>: preserve the subjects and scene in world space.','<Video 1>: preserve identity and action progression while changing the camera viewpoint.')
+
+def motion_payload(plan):
+    # Send one calibrated path, never the raw HUD path or diagnostic metadata.
+    return {key: plan[key] for key in ('frame_mode', 'reference', 'instruction', 'preserve',
+        'coordinate_anchor', 'coordinate_convention', 'duration_s', 'fps', 'interpolation',
+        'model_path', 'motion', 'final', 'forbid')}
+
+
+def motion_text(plan, sections=False):
+    reference = '<Picture 1>' if plan['frame_mode']=='Action Frame' else '<Video 1>'
+    lines = ['Scene and action: '+plan['instruction'], plan['reference'], plan['preserve'],
+        plan['coordinate_anchor']['instruction'], plan['coordinate_convention'],
+        'Camera interpolation: '+plan['motion']]
+    for segment in plan['segments']:
+        lines.append(f"{segment['start_s']:.3f}s–{segment['end_s']:.3f}s: {segment['camera_mode']}.")
+    lines.extend([plan['final'], plan['forbid'], 'Silence.'])
+    text = '\n'.join(lines)
+    if not sections:
+        return text
+    return (f'subject_definitions:\n{reference} is the source reference.\n\n'
+        f'summary:\nContinuous subject action with a camera timeline.\n\n'
+        f'retention_analysis:\nPreserve identity and scene coherence while action progresses.\n\n'
+        f'detailed_description:\n{text}\n\noverall_soundscape:\nSilence.\n\nnon_diegetic_music:\nN/A')
 
 class H3CameraEditor(base.H3CameraEditor):
     CATEGORY='bruxosdovfx/Camera H3'
@@ -200,8 +228,10 @@ class H3CameraEditor(base.H3CameraEditor):
     def run(self,camera_trajectory,profile,interpolation,instruction,subject_framing=None,minimax_format=None,reference_image=None,elevation_range=None,orbit_direction=None,subject_box=None,runtime_task=None,prompt_detail=None,frame_mode='Freeze Frame',source_fps=24.,freeze_index=0,ui_language='Português',loop_closure='auto'):
         loop_closure=base._choice(loop_closure,['auto','off'],'auto')
         frame_mode=base._choice(frame_mode,MODES,'Freeze Frame')
-        if frame_mode=='Motion Frame' and runtime_task and runtime_task!='scene coverage | camera path':
-            raise ValueError('PT: Motion Frame exige runtime_task camera path. EN: Motion Frame requires camera path runtime_task.')
+        if frame_mode!='Freeze Frame' and runtime_task and runtime_task!='scene coverage | camera path':
+            raise ValueError('PT: Action/Motion Frame exige runtime_task camera path. EN: Action/Motion Frame requires camera path runtime_task.')
+        if frame_mode=='Action Frame' and (reference_image is None or not instruction.strip()):
+            raise ValueError('PT: Action Frame exige uma imagem e a ação em instruction. EN: Action Frame requires an image and an action in instruction.')
         first,frames,count=prepare_frames(reference_image,frame_mode,source_fps,freeze_index)
         result=list(base.compile_camera(camera_trajectory,profile,interpolation,instruction,subject_framing,minimax_format,first,elevation_range,orbit_direction,subject_box,runtime_task,prompt_detail,allow_closure=frame_mode=='Freeze Frame' and loop_closure=='auto'))
         plan=json.loads(result[2])
@@ -209,33 +239,37 @@ class H3CameraEditor(base.H3CameraEditor):
         plan['loop_closure_request']=loop_closure
         plan['loop_closure_enabled']=bool(result[1].get('coverage_loop_closure'))
         plan['user_instruction']=instruction or ''
-        plan['source']={'input_frames':count,'source_fps':source_fps,'reference_frames':int(frames.shape[0]) if frames is not None else 0,'freeze_index':freeze_index if frame_mode=='Freeze Frame' else None}
-        if frame_mode=='Motion Frame':
+        plan['source']={'input_frames':count,'source_fps':source_fps,'reference_frames':int(frames.shape[0]) if frames is not None else 0,'freeze_index':freeze_index if frame_mode!='Motion Frame' else None}
+        if frame_mode!='Freeze Frame':
             plan=motion_plan(plan)
             result[0]=motion_text(plan,True)
-            result[4]=json.dumps(plan,ensure_ascii=False,indent=2) if minimax_format in ('compact JSON','compact JSON (no boxes)') else motion_text(plan,minimax_format=='coordinate + H3 sections')
+            result[4]=json.dumps(motion_payload(plan),ensure_ascii=False,indent=2) if minimax_format in ('compact JSON','compact JSON (no boxes)') else motion_text(plan,minimax_format=='coordinate + H3 sections')
             # Prevent a frozen scene-coverage encoder from silently taking over a motion request.
-            result[1]={'coverage_loop_closure':False,'bruxosdovfx_requires_ref2va':True}
+            result[1]={'coverage_loop_closure':False,'bruxosdovfx_requires_ref2va':frame_mode=='Motion Frame','bruxosdovfx_requires_native_video':True}
         en=ui_language=='English'
         source_count=int(frames.shape[0]) if frames is not None else 0
         closure=bool(result[1].get('coverage_loop_closure'))
         route=('Motion: feed your frame sequence and this minimax_prompt and length to bruxosdovfx H3 Motion Reference; use H3 Ref2VA. Do not use H3 Edit options.' if en else 'Motion: leve a sua sequência de frames junto com este minimax_prompt e length ao bruxosdovfx H3 Motion Reference; use H3 Ref2VA. Não use options do H3 Edit.') if frame_mode=='Motion Frame' else ('Freeze: feed the same image you connected here as the source image. Loop closure requires H3 Edit options and source wiring; native H3 needs separate end-frame wiring.' if en else 'Freeze: use a mesma imagem que você ligou aqui como imagem de origem. Loop closure exige options e imagem no H3 Edit; H3 nativo precisa de ligação separada do último frame.')
+        if frame_mode=='Action Frame':
+            route=('Action: connect the source image to your native image-to-video workflow and use minimax_prompt, length and fps. Do not connect H3 Edit options or reuse the initial image as the end frame.' if en else 'Action: conecte a imagem ao workflow nativo de imagem para vídeo e use minimax_prompt, length e fps. Não conecte options do H3 Edit nem repita a imagem inicial como frame final.')
         raw_path=plan['path'];net=abs(raw_path[-1]['azimuth']-raw_path[0]['azimuth'])
         reasons=[]
         if loop_closure=='off':reasons.append('disabled by user' if en else 'desativado pelo usuário')
-        if frame_mode=='Motion Frame':reasons.append('action continues' if en else 'a ação continua')
+        if frame_mode!='Freeze Frame':reasons.append('action continues' if en else 'a ação continua')
         if first is None:reasons.append('no reference image' if en else 'sem imagem de referência')
         if abs(net-360)>1e-6:reasons.append(f'orbit {net:g}°; requires 360°' if en else f'giro {net:g}°; exige 360°')
         for key,pt in [('elevation','elevação'),('distance','distância')]:
             if abs(raw_path[-1][key]-raw_path[0][key])>1e-6:reasons.append(f"{key if en else pt}: {raw_path[-1][key]:g} → {raw_path[0][key]:g}")
         if runtime_task and runtime_task!='scene coverage | camera path':reasons.append('still-image task' if en else 'tarefa de imagem')
-        result[3]=f"bruxosdovfx v19.1 | {frame_mode} | {result[5]} frames / 24 fps\n"+route+'\nLoop closure '+('ON' if closure else 'OFF')+(': '+', '.join(reasons) if reasons else '')+f"\n{'Source / reference frames' if en else 'Frames da fonte / referência'}: {count} / {source_count}. "+('Reference is resampled to 24 fps and trimmed to 17k+5; up to 16 trailing frames may be omitted. Camera following remains prompt-based.' if en else 'Referência reamostrada para 24 fps e cortada para 17k+5; até 16 frames finais podem ser omitidos. A câmera continua guiada por prompt.')
+        result[3]=f"bruxosdovfx v29 | {frame_mode} | {result[5]} frames / 24 fps\n"+route+'\nLoop closure '+('ON' if closure else 'OFF')+(': '+', '.join(reasons) if reasons else '')+f"\n{'Source / reference frames' if en else 'Frames da fonte / referência'}: {count} / {source_count}. "+('Reference is resampled to 24 fps and trimmed to 17k+5; up to 16 trailing frames may be omitted. Camera following remains prompt-based.' if en else 'Referência reamostrada para 24 fps e cortada para 17k+5; até 16 frames finais podem ser omitidos. A câmera continua guiada por prompt.')
         warnings=review_path(plan['path'],plan['duration_s'],base.ELEVATION_RANGES.get(elevation_range,30))
         plan['diagnostics']=warnings
         result[2]=json.dumps(plan,ensure_ascii=False,indent=2)
         result[3]+='\n'+diagnostic_text(warnings,en)
         if frame_mode=='Freeze Frame':
             result[3]+='\n'+('Frame batch resampling applies only to Motion Frame; Freeze uses just the selected frame.' if en else 'A reamostragem do lote só se aplica a Motion Frame; Freeze usa apenas o frame selecionado.')
+        if frame_mode!='Freeze Frame':
+            result[3]+='\n'+('Action and camera adherence require validation in generated video; the preview does not predict the result.' if en else 'Continuidade da ação e aderência da câmera precisam ser validadas no vídeo gerado; a prévia não prevê o resultado.')
         return tuple(result)
 
 class MotionReference:

@@ -19,6 +19,7 @@ app.registerExtension({
         write:value=>{trajectory.value=value;trajectory.callback?.(value);node.setDirtyCanvas(true,true);},
         duration:()=>(parseInt(find('profile').value,10)-1)/24,
         interpolation:()=>find('interpolation').value,
+        setInterpolation:value=>{const w=find('interpolation');w.value=value;w.callback?.(value);},
         loopClosure:()=>find('loop_closure')?.value||'auto',
         setLoopClosure:value=>{const w=find('loop_closure');if(w){w.value=value;w.callback?.(value);node.setDirtyCanvas(true,true);}},
         ...(find('experiment_mode')?{

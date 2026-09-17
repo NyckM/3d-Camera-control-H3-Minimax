@@ -77,3 +77,5 @@ export function installLanguage(root,getLanguage,setLanguage){
   select.addEventListener('change',()=>{setLanguage(select.value);apply();});apply();
   return {sync:apply,destroy(){disposed=true;observer.disconnect();}};
 }
+
+dictionary.set('Action Frame',['Animar imagem','Action Frame']);

@@ -1,0 +1,131 @@
+{
+  "schema": "h3-camera-plan-v15",
+  "camera_choreography": "From 0.000s to 2.562s: physically move the CAMERA 180.000 degrees around the fixed target toward the camera's LEFT, keeping the lens aimed at that target; the subject itself stays stationary; simultaneously physically RAISE the CAMERA along a vertical arc around the fixed target, revealing a higher viewpoint; keep aiming at the target; simultaneously increase elevation offset from 0.000 to 20.000 degrees relative to the reference camera; simultaneously pull back from radius 1.000 to 1.350 times the reference radius Then From 2.562s to 5.125s: physically move the CAMERA 180.000 degrees around the fixed target toward the camera's LEFT, keeping the lens aimed at that target; the subject itself stays stationary; simultaneously physically LOWER the CAMERA along a vertical arc around the fixed target, revealing a lower viewpoint; keep aiming at the target; simultaneously return to the reference elevation offset of 0 degrees; do not pass beyond it; simultaneously move closer from radius 1.350 to 1.000 times the reference radius",
+  "total_orbit_travel_degrees": 360.0,
+  "net_orbit_degrees": -360.0,
+  "frame": "16:9",
+  "duration_s": 5.125,
+  "fps": 24.0,
+  "reference": "The input image is the exact first frame. Preserve its original composition and viewing angle.",
+  "coordinate_convention": "Azimuth is an unwrapped orbit offset from the reference camera: positive travels toward the camera's right, negative toward its left while looking at the target. Do not interpret the sign as the subject own left or right, a pan in place, or a direction for the subject to rotate. Right and left are the moving camera frame while its lens points at the target, not the editor observer view. Elevation is an orbital angle offset relative to the reference camera, not an absolute ground angle or a tilt in place. Zero restores the reference elevation. Radius is distance to the target divided by the starting distance. Keep aiming at the same subject target, keep focal length fixed and camera roll zero. Do not force the source subject into a different initial bounding box. Preserve signed full turns; do not replace them with a shorter arc.",
+  "preserve": "The scene and subjects remain rigid in world space: identity, pose, materials, lighting and physical contacts stay unchanged. Only the camera moves. Hold the captured instant: fire, smoke, water and particles keep their captured shapes and world positions; do not continue their motion.",
+  "motion": "Interpolate each axis with a monotone cubic curve. Start and finish at zero speed. Keep each axis velocity continuous at interior keyframes; slow that axis to zero at its holds and reversals. Preserve explicit hold intervals. Never overshoot the two endpoint values. Speed may vary through the take; do not add a stop at every waypoint or a cut.",
+  "parallax": "Reveal consistent perspective and occlusion from physical camera motion. Background displacement depends on scene depth; do not prescribe an artificial screen-space shift.",
+  "axis_separation": "Follow azimuth, elevation angle and radius independently. An azimuth-only move with fixed elevation and radius stays on a level orbit. Changing radius at a nonzero elevation can also change world height. Do not add an unrequested radius or elevation change.",
+  "rotation_direction": "Read signed orbit offsets in the moving camera frame while aiming at the target. Keep the requested direction and full turns; do not rotate the subject instead.",
+  "completion": "The camera covers 360 degrees of rotation in 5.125s, an average of 70.2 degrees per second over the motion interval, not an instantaneous speed constraint. Follow the segment times and land on signed orbit offset -360 degrees. Reaching only part of the way is the most common failure: the amount of travel matters as much as its direction, and a small angle must stay small.",
+  "reversals": "",
+  "segments": [
+    {
+      "id": "S1",
+      "start_s": 0.0,
+      "end_s": 2.5625,
+      "camera_mode": "physically move the CAMERA 180.000 degrees around the fixed target toward the camera's LEFT, keeping the lens aimed at that target; the subject itself stays stationary; simultaneously physically RAISE the CAMERA along a vertical arc around the fixed target, revealing a higher viewpoint; keep aiming at the target; simultaneously increase elevation offset from 0.000 to 20.000 degrees relative to the reference camera; simultaneously pull back from radius 1.000 to 1.350 times the reference radius",
+      "camera_travel": "left",
+      "signed_orbit_degrees": -180.0,
+      "speed_curve": "monotone cubic per axis",
+      "rotation_deg_per_s": 70.244,
+      "background_travel": "",
+      "start": {
+        "azimuth": -0.0,
+        "elevation": 0.0,
+        "distance": 1.0
+      },
+      "end": {
+        "azimuth": -180.0,
+        "elevation": 20.0,
+        "distance": 1.35
+      }
+    },
+    {
+      "id": "S2",
+      "start_s": 2.5625,
+      "end_s": 5.125,
+      "camera_mode": "physically move the CAMERA 180.000 degrees around the fixed target toward the camera's LEFT, keeping the lens aimed at that target; the subject itself stays stationary; simultaneously physically LOWER the CAMERA along a vertical arc around the fixed target, revealing a lower viewpoint; keep aiming at the target; simultaneously return to the reference elevation offset of 0 degrees; do not pass beyond it; simultaneously move closer from radius 1.350 to 1.000 times the reference radius",
+      "camera_travel": "left",
+      "signed_orbit_degrees": -180.0,
+      "speed_curve": "monotone cubic per axis",
+      "rotation_deg_per_s": 70.244,
+      "background_travel": "",
+      "start": {
+        "azimuth": -180.0,
+        "elevation": 20.0,
+        "distance": 1.35
+      },
+      "end": {
+        "azimuth": -360.0,
+        "elevation": 0.0,
+        "distance": 1.0
+      }
+    }
+  ],
+  "final": "Reach the final pose at 5.125000s; there is no additional hold.",
+  "forbid": "No cuts, subject rotation, subject animation, digital zoom, lighting changes, or visible planning annotations.",
+  "instruction": "Preserve the source scene.",
+  "sound": "Silence.",
+  "coordinate_anchor": {
+    "kind": "reference_image",
+    "box": "[L=0.000, T=0.000, W=1.000, H=1.000]",
+    "instruction": "The complete reference image occupies [L=0.000, T=0.000, W=1.000, H=1.000]. Preserve its initial composition. This is the image boundary, not a subject bounding box."
+  },
+  "interpolation": "smooth",
+  "prompt_detail": "extended contracts",
+  "runtime_task": "scene coverage | camera path",
+  "output_duration_s": 5.166666666666667,
+  "last_frame_s": 5.125,
+  "path": [
+    {
+      "time": 0.0,
+      "azimuth": 0.0,
+      "elevation": 0.0,
+      "distance": 1.0
+    },
+    {
+      "time": 0.5,
+      "azimuth": 180.0,
+      "elevation": 20.0,
+      "distance": 1.35
+    },
+    {
+      "time": 1.0,
+      "azimuth": 360.0,
+      "elevation": 0.0,
+      "distance": 1.0
+    }
+  ],
+  "model_path": [
+    {
+      "time": 0.0,
+      "azimuth": -0.0,
+      "elevation": 0.0,
+      "distance": 1.0
+    },
+    {
+      "time": 0.5,
+      "azimuth": -180.0,
+      "elevation": 20.0,
+      "distance": 1.35
+    },
+    {
+      "time": 1.0,
+      "azimuth": -360.0,
+      "elevation": 0.0,
+      "distance": 1.0
+    }
+  ],
+  "orbit_direction": "invert H3 orbit",
+  "subject_framing": "medium shot",
+  "framing_note": "Legacy preset retained as metadata only; no measured subject box is available.",
+  "prompt_control": "semantic instructions, not geometric conditioning",
+  "frame_mode": "Freeze Frame",
+  "loop_closure_request": "auto",
+  "loop_closure_enabled": false,
+  "user_instruction": "",
+  "source": {
+    "input_frames": 0,
+    "source_fps": 24.0,
+    "reference_frames": 0,
+    "freeze_index": 0
+  },
+  "diagnostics": []
+}

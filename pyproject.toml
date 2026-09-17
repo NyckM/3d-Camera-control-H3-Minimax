@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-h3-camera-editor"
 description = "Planejador visual de camera para o MiniMax H3: orbita, elevacao, distancia e keyframes compilados em prompts, com saidas para H3 Edit e para o caminho nativo do H3."
-version = "20.0.0"
+version = "29.0.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = []

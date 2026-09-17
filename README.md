@@ -367,21 +367,7 @@ Exemplos:
 Action e Motion desativam fechamento por âncora final quando incompatível com a tarefa.  
 Action and Motion disable final anchor closure when incompatible with the task.
 
----
 
-## Diagnostics
-
-O painel pode identificar situações como:
-
-- holds / pauses
-- static camera paths
-- zero crossings
-- paths that may not close cleanly
-
-Os diagnósticos ajudam a revisar a trajetória, mas não medem a fidelidade final do H3.  
-Diagnostics help review the path but do not measure final H3 fidelity.
-
----
 
 ## Editor de câmera / Camera editor
 
@@ -402,6 +388,12 @@ They do not modify the camera path or prompt.
 ---
 
 ### Edição direta / Direct editing
+
+
+
+https://github.com/user-attachments/assets/9f685d14-84e6-425d-83bd-34a1cf8c8ccf
+
+
 
 Arraste os pontos numerados diretamente no canvas:
 
@@ -444,68 +436,6 @@ It is not a 3D reconstruction of the image and does not predict character action
 
 ---
 
-## Vídeo durante a edição / Video while editing
-
-Clique **Imagem / vídeo** e selecione um vídeo local compatível com o navegador:
-
-- MP4 H.264
-- WebM
-
-O botão **▶** reproduz vídeo e trajetória juntos.  
-The **▶** button plays video and camera path together.
-
-Você pode continuar ajustando a câmera durante o playback.  
-You can continue editing the camera during playback.
-
-`+ Keyframe agora / + Keyframe now` adiciona um ponto no tempo atual.  
-`+ Keyframe now` adds a point at the current time.
-
-O vídeo inteiro é mapeado à duração de saída.  
-The full video is mapped to the output duration.
-
-A velocidade da prévia não altera `source_fps` nem os frames de geração.  
-Preview speed does not change `source_fps` or generation frames.
-
-O vídeo local:
-
-- não é enviado ao servidor
-- não é salvo no workflow
-- toca sem áudio
-- precisa ser selecionado novamente após recarregar
-
-The local video:
-
-- is not uploaded to the server
-- is not stored in the workflow
-- plays without audio
-- must be selected again after reload
-
----
-
-## Presets de trajetória / Camera path presets
-
-O menu **Presets** contém **18 movimentos** adaptados dos exemplos públicos de `loopforge0/minimaxh3-shots-skills`.  
-The **Presets** menu contains **18 camera moves** adapted from the public `loopforge0/minimaxh3-shots-skills` examples.
-
-**9 presets** possuem trajetória aplicável.  
-**9 presets** provide an applicable path.
-
-**9 presets** permanecem disponíveis somente como referência.  
-**9 presets** remain available as reference only.
-
-### Como usar / How to use
-
-1. Selecione o preset. / Select a preset.
-2. Leia a descrição. / Read the description.
-3. Clique **Aplicar trajetória / Apply path**.
-4. Edite os keyframes normalmente. / Edit the keyframes normally.
-5. Use **Desfazer preset / Undo preset** para restaurar a trajetória anterior.
-
-Aplicar um preset substitui trajetória e interpolação, mantendo duração e modo de cena.  
-Applying a preset replaces path and interpolation while keeping duration and scene mode.
-
-O histórico de Undo é local à sessão.  
-Undo history is local to the current session.
 
 ### Presets aplicáveis / Applicable presets
 
@@ -636,34 +566,6 @@ Use `guide_prompt`, not the Freeze `minimax_prompt`, for the Camera Guide + Ref2
 
 ---
 
-## Formato do Camera Guide / Camera Guide format
-
-O guia usa:
-
-- RGB float32 frames
-- 24 fps
-- comprimento em padrão `17n + 5`
-- FOV visual fixo de 40°
-- proxy estático
-
-Os frames não incluem:
-
-- câmera visível
-- trajetória desenhada
-- textos
-- controles da interface
-
-Marcadores coloridos são opcionais e fazem parte do guia.  
-Colored markers are optional and are part of the guide.
-
-O guia representa **movimento de câmera**, não movimento do personagem.  
-The guide represents **camera motion**, not character motion.
-
-A ação do personagem continua vindo do prompt.  
-Character action still comes from the prompt.
-
----
-
 ## Principais controles / Main controls
 
 | Controle | PT | EN |
@@ -754,23 +656,7 @@ rgb_frames      guide_prompt
 Ref2VA          Camera Prompt Compose
 ```
 
----
 
-## Performance do Camera Guide
-
-O render possui orçamento máximo de aproximadamente **32 milhões de pixels por lote**.  
-The renderer has an approximate maximum budget of **32 million pixels per batch**.
-
-Isso equivale a cerca de **384 MB** somente para frames RGB float32, além de temporários.  
-This is roughly **384 MB** for RGB float32 frames alone, plus temporary buffers.
-
-Para sequências longas, reduza a resolução.  
-For long sequences, reduce resolution.
-
-O processamento respeita o botão de interrupção do ComfyUI.  
-Processing respects ComfyUI's interrupt button.
-
----
 
 ## Limitações / Limitations
 
@@ -880,13 +766,6 @@ Baseado na integração H3 Edit de:
 
 Camera vocabulary follows MiniMax camera-control conventions.  
 O vocabulário de câmera segue as convenções de controle de câmera da MiniMax.
-
-Os presets de trajetória são adaptações manuais dos exemplos públicos de:
-
-`loopforge0/minimaxh3-shots-skills`
-
-As trajetórias foram reinterpretadas para os controles disponíveis no editor; personagens, cenários, áudio e prompts completos do projeto original não foram incorporados.  
-The paths were manually reinterpreted for the controls available in the editor; characters, scenes, audio and full prompts from the source project were not incorporated.
 
 O Camera Guide é um render geométrico auxiliar e não contém implementação do modelo MiniMax H3.  
 Camera Guide is an auxiliary geometric renderer and does not contain MiniMax H3 model implementation.

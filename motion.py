@@ -217,7 +217,7 @@ class H3CameraEditor(base.H3CameraEditor):
             for key,value in group.items():
                 group[key]=(value[0],dict(value[1] if len(value)>1 else {},tooltip=help_text(key)))
         return data
-    def run(self,camera_trajectory,profile,interpolation,instruction,subject_framing=None,minimax_format=None,reference_image=None,elevation_range=None,orbit_direction=None,subject_box=None,runtime_task=None,prompt_detail=None,frame_mode='Freeze Frame',source_fps=24.,freeze_index=0,ui_language='Português',loop_closure='auto'):
+    def run(self,camera_trajectory,profile,interpolation,instruction='',subject_framing=None,minimax_format=None,reference_image=None,elevation_range=None,orbit_direction=None,subject_box=None,runtime_task=None,prompt_detail=None,frame_mode='Freeze Frame',source_fps=24.,freeze_index=0,ui_language='Português',loop_closure='auto'):
         loop_closure=base._choice(loop_closure,['auto','off'],'auto')
         frame_mode=base._choice(frame_mode,MODES,'Freeze Frame')
         if frame_mode!='Freeze Frame' and runtime_task and runtime_task!='scene coverage | camera path':

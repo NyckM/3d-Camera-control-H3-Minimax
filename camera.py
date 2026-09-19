@@ -608,7 +608,7 @@ class H3CameraEditor:
                 return f'Unknown option {value!r}. Allowed: {", ".join(allowed)}.'
         return True
 
-    def run(self, camera_trajectory, profile, interpolation, instruction, subject_framing=None,
+    def run(self, camera_trajectory, profile, interpolation, instruction='', subject_framing=None,
             minimax_format=None, reference_image=None, elevation_range=None, orbit_direction=None, subject_box=None,
             runtime_task=None, prompt_detail=None):
         return compile_camera(camera_trajectory, profile, interpolation, instruction, subject_framing,

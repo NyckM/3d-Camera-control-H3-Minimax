@@ -1,11 +1,21 @@
 import { installLanguage } from './language.js';
 import { app } from '../../scripts/app.js';
+import { migrateGraph } from './legacy-workflow.js';
 import { api } from '../../scripts/api.js';
 import { createCameraEditor } from './panel.js';
 import { resolveLinkedImage } from './linked-image.js';
 
 app.registerExtension({
   name: 'bruxosdovfx.h3.camera_experimental',
+  // PT: conserta workflows salvos antes da v32 antes do grafo ser montado (valores e fios).
+  // EN: repairs pre-v32 workflows before the graph is built (values and wires).
+  beforeConfigureGraph(graphData){
+    try{
+      const report=migrateGraph(graphData);
+      if(report.nodes)console.info(`[Camera H3] workflow anterior à v32 migrado: ${report.nodes} node(s), ${report.links} ligação(ões) realinhada(s)`+(report.dropped?`, ${report.dropped} removida(s)`:''));
+      for(const text of report.texts)console.info('[Camera H3] o widget instruction saiu na v32. O texto era:',text);
+    }catch(error){console.warn('[Camera H3] migração do workflow falhou',error);}
+  },
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if(!['BruxosH3Camera','BruxosH3CameraExperimental','H3LocalCameraEditor'].includes(nodeData.name))return;
     const created=nodeType.prototype.onNodeCreated;
@@ -52,32 +62,6 @@ app.registerExtension({
       node.onRemoved=function(){language.destroy();editor.destroy();return removed?.apply(this,arguments);};
       node.setSize([650,Math.max(node.size[1],1200)]);
       return result;
-    };
-    // PT: v32 tirou instruction e experiment_mode. widgets_values é posicional, então workflows
-    // salvos antes disso precisam ser remapeados por nome na hora de carregar.
-    // EN: v32 dropped instruction and experiment_mode. widgets_values is positional, so workflows saved
-    // before that are remapped by name on load.
-    const LEGACY_ORDER=['camera_trajectory','profile','interpolation','instruction','subject_framing','minimax_format',
-      'elevation_range','orbit_direction','subject_box','runtime_task','prompt_detail','frame_mode','source_fps',
-      'freeze_index','ui_language','loop_closure','experiment_mode','depth_animation','warp_hfov','warp_depth_ratio',
-      'warp_invert_depth','warp_smooth_depth','warp_aim','warp_pivot_depth','warp_direction','warp_length',
-      'warp_long_side','warp_offset_azimuth','warp_offset_elevation','warp_offset_distance','warp_hold_at',
-      'warp_hold_frames','warp_format'];
-    const configure=nodeType.prototype.onConfigure;
-    nodeType.prototype.onConfigure=function(info){
-      const values=info?.widgets_values;
-      if(Array.isArray(values)&&typeof values[3]==='string'&&LEGACY_ORDER.length-values.length<=2){
-        const legacy=new Map(LEGACY_ORDER.slice(0,values.length).map((name,i)=>[name,values[i]]));
-        if(legacy.has('instruction')&&legacy.has('ui_language')){
-          const names=(this.widgets||[]).map(w=>w.name);
-          if(!names.includes('instruction')){
-            info.widgets_values=names.map((name,i)=>legacy.has(name)?legacy.get(name):this.widgets[i]?.value);
-            const text=String(legacy.get('instruction')||'').trim();
-            if(text)console.info('[Camera H3] v32 removeu o widget instruction. O texto estava:',text);
-          }
-        }
-      }
-      return configure?.apply(this,arguments);
     };
     // PT: a execução devolve os PNGs da prévia do Depth Warp. EN: execution returns the Depth Warp preview PNGs.
     const executed=nodeType.prototype.onExecuted;

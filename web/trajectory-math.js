@@ -1,22 +1,27 @@
 // Signed angles are never normalized during playback / Reprodução preserva voltas e sinais.
-export const AXES = ['azimuth', 'elevation', 'distance'];
+export const AXES = ['azimuth', 'elevation', 'distance', 'height'];
+export const AXIS_DEFAULTS = {azimuth: 0, elevation: 0, distance: 1, height: 0};
+// height: grua. Sobe e desce a câmera sem girar em torno do alvo, em múltiplos do raio inicial.
+// height: boom. Raises and lowers the camera without orbiting, in units of the starting radius.
+// Trajetórias e presets anteriores à v32 não têm height / paths and presets before v32 have no height.
+export const axis = (point, name) => {const value = point[name]; return value == null ? AXIS_DEFAULTS[name] : value;};
 
 function validate(path) {
   if (!Array.isArray(path) || !path.length) throw new Error('Empty camera path / Trajetória vazia.');
   let previous = -Infinity;
   for (const point of path) {
-    if (!['time', ...AXES].every(k => Number.isFinite(point[k])))
+    if (!Number.isFinite(point.time) || !AXES.every(k => Number.isFinite(axis(point, k))))
       throw new Error('Non-finite camera value / Valor de câmera não finito.');
     if (point.time <= previous) throw new Error('Times must increase / Tempos devem ser crescentes.');
     previous = point.time;
   }
 }
 
-function slope(path, index, axis) {
+function slope(path, index, name) {
   if (index === 0 || index === path.length - 1) return 0;
   const [a, b, c] = path.slice(index - 1, index + 2);
   const h0 = b.time - a.time, h1 = c.time - b.time;
-  const d0 = (b[axis] - a[axis]) / h0, d1 = (c[axis] - b[axis]) / h1;
+  const d0 = (axis(b, name) - axis(a, name)) / h0, d1 = (axis(c, name) - axis(b, name)) / h1;
   if (d0 === 0 || d1 === 0 || Math.sign(d0) !== Math.sign(d1)) return 0;
   const w0 = 2*h1 + h0, w1 = h1 + 2*h0;
   return (w0 + w1) / (w0 / d0 + w1 / d1);
@@ -26,21 +31,22 @@ function slope(path, index, axis) {
 export function interpolatePose(path, time, interpolation = 'smooth', detail = 'v15 baseline') {
   validate(path);
   if (!Number.isFinite(time)) throw new Error('Time must be finite / Tempo deve ser finito.');
-  if (time <= path[0].time) return Object.fromEntries(AXES.map(k => [k, path[0][k]]));
-  if (time >= path.at(-1).time) return Object.fromEntries(AXES.map(k => [k, path.at(-1)[k]]));
+  if (time <= path[0].time) return Object.fromEntries(AXES.map(k => [k, axis(path[0], k)]));
+  if (time >= path.at(-1).time) return Object.fromEntries(AXES.map(k => [k, axis(path.at(-1), k)]));
   const rightIndex = path.findIndex(p => p.time >= time);
   const a = path[rightIndex - 1], b = path[rightIndex], h = b.time - a.time;
   const u = (time - a.time) / h;
-  if (interpolation !== 'smooth') return Object.fromEntries(AXES.map(k => [k, a[k] + (b[k] - a[k])*u]));
+  if (interpolation !== 'smooth') return Object.fromEntries(AXES.map(k => [k, axis(a, k) + (axis(b, k) - axis(a, k))*u]));
   if (detail !== 'extended contracts') {
     const ease = u*u*(3 - 2*u);
-    return Object.fromEntries(AXES.map(k => [k, a[k] + (b[k] - a[k])*ease]));
+    return Object.fromEntries(AXES.map(k => [k, axis(a, k) + (axis(b, k) - axis(a, k))*ease]));
   }
   const h00 = 2*u**3 - 3*u**2 + 1, h10 = u**3 - 2*u**2 + u;
   const h01 = -2*u**3 + 3*u**2, h11 = u**3 - u**2;
   return Object.fromEntries(AXES.map(k => {
-    const value = h00*a[k] + h10*h*slope(path, rightIndex-1, k) + h01*b[k] + h11*h*slope(path, rightIndex, k);
-    return [k, Math.max(Math.min(a[k], b[k]), Math.min(Math.max(a[k], b[k]), value))];
+    const pa = axis(a, k), pb = axis(b, k);
+    const value = h00*pa + h10*h*slope(path, rightIndex-1, k) + h01*pb + h11*h*slope(path, rightIndex, k);
+    return [k, Math.max(Math.min(pa, pb), Math.min(Math.max(pa, pb), value))];
   }));
 }
 

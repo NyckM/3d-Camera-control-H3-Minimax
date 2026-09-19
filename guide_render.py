@@ -28,6 +28,7 @@ def render_frame(pose,width,height,shape='mannequin',floor_cues='markers'):
     a,e=math.radians(pose['azimuth']),math.radians(pose['elevation'])
     eye=np.array([math.sin(a)*math.cos(e),math.sin(e),math.cos(a)*math.cos(e)])*pose['distance']*1.8
     forward=-eye/np.linalg.norm(eye)
+    eye=eye+np.array([0.,pose.get('height',0.)*1.8,0.])  # grua: sobe sem girar / boom: rises without rotating
     right=np.cross(forward,[0.,1.,0.]);right/=np.linalg.norm(right)
     up=np.cross(right,forward)
     yy,xx=np.mgrid[0:height,0:width]

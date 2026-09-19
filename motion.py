@@ -27,13 +27,6 @@ HELP = {
    'How the camera travels between two keyframes. smooth accelerates and decelerates at the ends of the take and '
    'holds a constant rate through the middle, stopping only where the rotation reverses. linear holds one single '
    'rate from the first frame to the last, which is more predictable when measuring a test.'),
- 'instruction': (
-   'Texto seu, acrescentado uma única vez no fim do prompt. Use para o que o node não tem como saber: o cenário, qual '
-   'pessoa é o alvo quando há mais de uma, referência de estilo. Não repita o que já sai pronto (ângulos, tempos, '
-   'tomada única) e, em Motion Frame, não peça cena congelada: seria o oposto do modo.',
-   'Your own text, added once at the end of the prompt. Use it for what the node cannot know: the location, which '
-   'person is the target when there is more than one, a style reference. Do not repeat what is already generated '
-   '(angles, timings, single take) and, in Motion Frame, do not ask for a frozen scene: that contradicts the mode.'),
  'subject_framing': (
    'O tipo de plano da sua imagem: close-up é rosto e ombros, medium shot é da cintura para cima, wide shot é o '
    'sujeito com o cenário em volta. Ele só registra essa informação no prompt; não aplica zoom, corte nem movimento. '
@@ -103,8 +96,7 @@ HELP = {
    'complete. off disables it so you can compare tests side by side.'),
 }
 
-HELP['frame_mode'] = ('Freeze Frame congela a cena. Motion Frame preserva ação de vídeo com Ref2VA. Action Frame anima uma imagem usando a ação em instruction; use workflow nativo de imagem para vídeo. Freeze permanece o padrão.', 'Freeze Frame freezes the scene. Motion Frame preserves video action with Ref2VA. Action Frame animates an image using instruction; use a native image-to-video workflow. Freeze remains the default.')
-HELP['instruction'] = ('Descreva cena e ação. Em Action Frame este campo é obrigatório e aparece antes das instruções de câmera. Em Motion Frame descreva uma ação compatível com a referência.', 'Describe the scene and action. Required in Action Frame and placed before camera directions. In Motion Frame describe action consistent with the reference.')
+HELP['frame_mode'] = ('Freeze Frame congela a cena. Motion Frame preserva a ação de um vídeo com Ref2VA. Action Frame anima uma imagem: descreva a ação no Camera Prompt Compose e use um workflow nativo de imagem para vídeo. Freeze continua o padrão.', 'Freeze Frame freezes the scene. Motion Frame preserves video action with Ref2VA. Action Frame animates an image: describe the action in Camera Prompt Compose and use a native image-to-video workflow. Freeze remains the default.')
 
 
 def help_text(name):
@@ -166,7 +158,7 @@ def motion_payload(plan):
 
 def motion_text(plan, sections=False):
     reference = '<Picture 1>' if plan['frame_mode']=='Action Frame' else '<Video 1>'
-    lines = ['Scene and action: '+plan['instruction'], plan['reference'], plan['preserve'],
+    lines = ([f"Scene and action: {plan['instruction']}"] if plan['instruction'].strip() else []) + [plan['reference'], plan['preserve'],
         plan['coordinate_anchor']['instruction'], plan['coordinate_convention'],
         'Camera interpolation: '+plan['motion']]
     for segment in plan['segments']:
@@ -220,7 +212,7 @@ class H3CameraEditor(base.H3CameraEditor):
     @classmethod
     def INPUT_TYPES(cls):
         data=super().INPUT_TYPES()
-        data['optional'].update(frame_mode=(MODES,{'default':'Freeze Frame'}),source_fps=('FLOAT',{'default':24.,'min':1.,'max':240.}),ui_language=(['Português','English'],{'default':'Português'}),loop_closure=(['auto','off'],{'default':'auto'}))
+        data['optional'].update(frame_mode=(MODES,{'default':'Freeze Frame'}),source_fps=('FLOAT',{'default':24.,'min':1.,'max':240.}),ui_language=(['Português','English','中文'],{'default':'Português'}),loop_closure=(['auto','off'],{'default':'auto'}))
         for group in data.values():
             for key,value in group.items():
                 group[key]=(value[0],dict(value[1] if len(value)>1 else {},tooltip=help_text(key)))
@@ -261,7 +253,7 @@ class H3CameraEditor(base.H3CameraEditor):
         for key,pt in [('elevation','elevação'),('distance','distância')]:
             if abs(raw_path[-1][key]-raw_path[0][key])>1e-6:reasons.append(f"{key if en else pt}: {raw_path[-1][key]:g} → {raw_path[0][key]:g}")
         if runtime_task and runtime_task!='scene coverage | camera path':reasons.append('still-image task' if en else 'tarefa de imagem')
-        result[3]=f"bruxosdovfx v29 | {frame_mode} | {result[5]} frames / 24 fps\n"+route+'\nLoop closure '+('ON' if closure else 'OFF')+(': '+', '.join(reasons) if reasons else '')+f"\n{'Source / reference frames' if en else 'Frames da fonte / referência'}: {count} / {source_count}. "+('Reference is resampled to 24 fps and trimmed to 17k+5; up to 16 trailing frames may be omitted. Camera following remains prompt-based.' if en else 'Referência reamostrada para 24 fps e cortada para 17k+5; até 16 frames finais podem ser omitidos. A câmera continua guiada por prompt.')
+        result[3]=f"bruxosdovfx v30 | {frame_mode} | {result[5]} frames / 24 fps\n"+route+'\nLoop closure '+('ON' if closure else 'OFF')+(': '+', '.join(reasons) if reasons else '')+f"\n{'Source / reference frames' if en else 'Frames da fonte / referência'}: {count} / {source_count}. "+('Reference is resampled to 24 fps and trimmed to 17k+5; up to 16 trailing frames may be omitted. Camera following remains prompt-based.' if en else 'Referência reamostrada para 24 fps e cortada para 17k+5; até 16 frames finais podem ser omitidos. A câmera continua guiada por prompt.')
         warnings=review_path(plan['path'],plan['duration_s'],base.ELEVATION_RANGES.get(elevation_range,30))
         plan['diagnostics']=warnings
         result[2]=json.dumps(plan,ensure_ascii=False,indent=2)

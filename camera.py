@@ -23,6 +23,7 @@ MINIMAX_FORMATS = ['coordinate only', 'coordinate + H3 sections', 'compact JSON'
 # Every timing in this node is derived from this rate; the video node must use the same one.
 FPS = 24.0
 ORBIT_DIRECTIONS = ['invert H3 orbit', 'same as HUD']
+HEIGHT_RANGE = 3.0  # altura em multiplos do raio inicial / height in units of the starting radius
 # Editor limits for the elevation slider. Past about 20 degrees the horizon has already
 # left the frame, so the wide range mostly made the control twitchy without adding shots.
 ELEVATION_RANGES = {'+/-15': 15, '+/-30': 30, '+/-60': 60, '+/-89': 89}
@@ -61,19 +62,23 @@ def validate_path(raw):
         if not isinstance(item, dict):
             raise ValueError('Each keyframe must be an object.')
         pose = {}
-        for field in ('time', 'azimuth', 'elevation', 'distance'):
+        for field in ('time', 'azimuth', 'elevation', 'distance', 'height'):
             value = item.get(field)
+            if value is None and field == 'height':
+                value = 0.0  # trajetorias salvas antes da v32 / paths saved before v32
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise ValueError(f'{field} must be a finite number.')
             pose[field] = float(value)
         if not 0 <= pose['time'] <= 1 or not -89 <= pose['elevation'] <= 89 or not 0.1 <= pose['distance'] <= 4:
             raise ValueError('Allowed ranges: time 0..1, elevation -89..89, distance 0.1..4.')
+        if not -HEIGHT_RANGE <= pose['height'] <= HEIGHT_RANGE:
+            raise ValueError(f'Allowed range: height -{HEIGHT_RANGE:g}..{HEIGHT_RANGE:g}.')
         result.append(pose)
     if any(b['time'] <= a['time'] for a, b in zip(result, result[1:])):
         raise ValueError('Keyframe times must be strictly increasing.')
     first = result[0]
-    if any(abs(first[k] - v) > 1e-6 for k, v in dict(time=0, azimuth=0, elevation=0, distance=1).items()):
-        raise ValueError('The anchored source must start at time=0, azimuth=0, elevation=0, distance=1.')
+    if any(abs(first[k] - v) > 1e-6 for k, v in dict(time=0, azimuth=0, elevation=0, distance=1, height=0).items()):
+        raise ValueError('The anchored source must start at time=0, azimuth=0, elevation=0, distance=1, height=0.')
     if sum(abs(b['azimuth'] - a['azimuth']) for a, b in zip(result, result[1:])) > 11520:
         raise ValueError('Azimuth travel exceeds 32 full turns.')
     return result
@@ -214,12 +219,13 @@ from .trajectory_math import interpolate_pose
 
 
 def _camera_mode(start, end):
-    if all(abs(end[k]-start[k]) < 1e-8 for k in ('azimuth','elevation','distance')):
-        return 'hold the camera viewpoint, elevation and radius unchanged for this entire interval'
+    if all(abs(end[k]-start[k]) < 1e-8 for k in ('azimuth','elevation','distance','height')):
+        return 'hold the camera viewpoint, elevation, height and radius unchanged for this entire interval'
     moves = []
     da = end['azimuth'] - start['azimuth']
     de = end['elevation'] - start['elevation']
     dd = end['distance'] - start['distance']
+    dh = end.get('height', 0.0) - start.get('height', 0.0)
     if abs(da) > 1e-8:
         moves.append(f"physically move the CAMERA {abs(da):.3f} degrees around the fixed target toward the camera's {'RIGHT' if da > 0 else 'LEFT'}, keeping the lens aimed at that target; the subject itself stays stationary")
     if abs(de) > 1e-8:
@@ -234,6 +240,11 @@ def _camera_mode(start, end):
         moves.append(f"{'pull back' if dd > 0 else 'move closer'} from radius {start['distance']:.3f} to {end['distance']:.3f} times the reference radius")
     else:
         moves.append(f"maintain radius {end['distance']:.3f} times the reference radius")
+    if abs(dh) > 1e-8:
+        moves.append(f"physically CRANE the CAMERA straight {'UP' if dh > 0 else 'DOWN'} on a vertical rig, from height "
+                     f"offset {start.get('height', 0.0):.3f} to {end.get('height', 0.0):.3f} times the reference radius, "
+                     f"WITHOUT orbiting and WITHOUT changing the lens direction, so the target drifts "
+                     f"{'down' if dh > 0 else 'up'} in frame; this is a boom, not an elevation arc")
     return '; simultaneously '.join(moves)
 
 
@@ -272,8 +283,8 @@ def build_plan(path, end, interpolation, instruction, aspect, detail='extended c
             speed_curve=beat_curves(path, interpolation, detail)[i-1],
             rotation_deg_per_s=round(abs(b['azimuth']-a['azimuth']) / max((b['time']-a['time'])*end, 1e-9), 3),
             background_travel='',
-            start={k: a[k] for k in ('azimuth','elevation','distance')},
-            end={k: b[k] for k in ('azimuth','elevation','distance')},
+            start={k: a[k] for k in ('azimuth','elevation','distance','height')},
+            end={k: b[k] for k in ('azimuth','elevation','distance','height')},
         ))
     turns = sorted(reversal_indices(path))
     extended = detail != 'v15 baseline'
@@ -296,6 +307,10 @@ def build_plan(path, end, interpolation, instruction, aspect, detail='extended c
             'as the subject own left or right, a pan in place, or a direction for the subject to rotate. '
             'Right and left are the moving camera frame while its lens points at the target, not the editor observer view. Elevation is an orbital angle offset relative to the reference '
             'camera, not an absolute ground angle or a tilt in place. Zero restores the reference elevation. '
+            'Height is a straight vertical camera translation in units of the starting radius, a crane or boom: '
+            'positive lifts the camera, negative lowers it, WITHOUT orbiting and WITHOUT changing the lens '
+            'direction, so the target moves within the frame. Height and elevation are different axes and can be '
+            'requested together. '
             'Radius is distance to the target divided by the starting distance. Keep aiming at the same '
             'subject target, keep focal length fixed and camera roll zero. Do not force the source subject '
             'into a different initial bounding box. Preserve signed full turns; do not replace them with a shorter arc.'),
@@ -314,9 +329,9 @@ def build_plan(path, end, interpolation, instruction, aspect, detail='extended c
             'a keyframe when adjacent segments differ in duration or displacement. No extra dwell or cut.'),
         parallax='Reveal consistent perspective and occlusion from physical camera motion. Background displacement depends on scene depth; do not prescribe an artificial screen-space shift.',
         axis_separation=('' if not extended else
-            'Follow azimuth, elevation angle and radius independently. An azimuth-only move with fixed '
-            'elevation and radius stays on a level orbit. Changing radius at a nonzero elevation can also '
-            'change world height. Do not add an unrequested radius or elevation change.'),
+            'Follow azimuth, elevation angle, height and radius independently. An azimuth-only move with fixed '
+            'elevation, height and radius stays on a level orbit. A height change alone is a pure vertical '
+            'translation with no rotation. Do not add an unrequested radius, elevation or height change.'),
         rotation_direction=('Read signed orbit offsets in the moving camera frame while aiming at the target. Keep the requested direction and full turns; do not rotate the subject instead.' if extended else ''),
         completion=('' if not extended else
             f'The camera covers {sum(abs(b["azimuth"]-a["azimuth"]) for a,b in zip(path,path[1:])):g} degrees of '
@@ -380,7 +395,9 @@ def plan_text(plan, sections=False):
                 row += f"; {s['background_travel']}"
             row += f"; speed curve {s['speed_curve']}"
         lines.append(row + '.')
-    lines.extend([plan['final'],plan['forbid'],'Additional direction: '+plan['instruction']])
+    lines.extend([plan['final'],plan['forbid']])
+    if plan['instruction'].strip() and plan['instruction'].strip()!='Preserve the source scene.':
+        lines.append('Additional direction: '+plan['instruction'])
     text='\n'.join(lines)
     if not sections:
         return text+'\nSilence.'
@@ -423,7 +440,8 @@ def compile_camera(raw, profile, interpolation, instruction, framing=None, minim
     closes=(allow_closure and reference_image is not None and not task
             and math.isclose(abs(net),360.,rel_tol=0,abs_tol=1e-6)
             and math.isclose(path[0]['elevation'],path[-1]['elevation'],rel_tol=0,abs_tol=1e-6)
-            and math.isclose(path[0]['distance'],path[-1]['distance'],rel_tol=0,abs_tol=1e-6))
+            and math.isclose(path[0]['distance'],path[-1]['distance'],rel_tol=0,abs_tol=1e-6)
+            and math.isclose(path[0]['height'],path[-1]['height'],rel_tol=0,abs_tol=1e-6))
     if task:
         instruction=(f'Settled tail: complete the whole camera move by {end:.3f}s and then hold the new framing '
                      f'perfectly still, with no drift, through {frames/FPS:.3f}s. The still tail is what the final '
@@ -512,12 +530,6 @@ class H3CameraEditor:
                 'interpolation': (['smooth', 'linear'], {'tooltip':
                     'smooth: a câmera suaviza a entrada e a saída da tomada e mantém taxa constante no meio, parando '
                     'só onde o sentido do giro inverte. linear: uma taxa constante do primeiro ao último frame.'}),
-                'instruction': ('STRING', {'default': '', 'multiline': True, 'tooltip':
-                    'Texto livre, acrescentado UMA vez no fim do prompt. Escreva só o que o node não tem como saber: '
-                    'cenário, qual é o alvo quando há mais de uma pessoa, referência de estilo. Não repita o que já '
-                    'sai pronto (cena congelada, primeira imagem como referência, mira travada, roll zero, ângulos, '
-                    'tempos, tomada única sem cortes). Cuidado com contradição: escrever "raio constante" enquanto um '
-                    'keyframe muda a distância faz o prompt afirmar duas coisas opostas.'}),
             },
             'optional': {
                 'subject_framing': (list(FRAMINGS), {'default': 'medium shot', 'tooltip':

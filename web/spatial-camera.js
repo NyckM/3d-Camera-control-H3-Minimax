@@ -7,6 +7,9 @@ export const dot=(a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0);
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const unit=a=>mul(a,1/Math.max(1e-12,Math.hypot(...a)));
 export function position(p){const a=rad(p.azimuth),e=rad(p.elevation),r=p.distance*1.8;return [Math.sin(a)*Math.cos(e)*r,Math.sin(e)*r,Math.cos(a)*Math.cos(e)*r];}
+// A órbita fica em position(); a grua entra só no olho, então arrastar não mistura os eixos.
+// position() stays pure orbit; the boom only shifts the eye, so dragging never mixes the axes.
+export const eyeOf=p=>{const e=position(p);return [e[0],e[1]+(p.height||0)*1.8,e[2]];};
 export function observerBasis(yaw,pitch){return {right:[Math.cos(yaw),0,-Math.sin(yaw)],up:[-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)],depth:[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)]};}
 export function dragOrbit(original,dx,dy,scale,yaw,pitch,limit=89){
   // Orthographic pointer ray intersects a sphere about the subject. Preserve the
@@ -20,7 +23,7 @@ export function dragOrbit(original,dx,dy,scale,yaw,pitch,limit=89){
   const azimuth=original.azimuth+((raw-original.azimuth+180)%360+360)%360-180;
   return {...original,azimuth:clamp(azimuth,-11520,11520),elevation:clamp(Math.asin(clamp(next[1]/r,-1,1))*180/Math.PI,-limit,limit)};
 }
-export function cameraBasis(pose){const eye=position(pose),forward=unit(mul(eye,-1));let right=unit(cross(forward,[0,1,0]));if(Math.hypot(...right)<.1)right=[1,0,0];return {eye,forward,right,up:unit(cross(right,forward))};}
+export function cameraBasis(pose){const forward=unit(mul(position(pose),-1));let right=unit(cross(forward,[0,1,0]));if(Math.hypot(...right)<.1)right=[1,0,0];return {eye:eyeOf(pose),forward,right,up:unit(cross(right,forward))};}
 export function frustum(pose,aspect=16/9){const b=cameraBasis(pose),depth=.45,t=Math.tan(rad(20));const center=add(b.eye,mul(b.forward,depth));return {eye:b.eye,corners:[[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y])=>add(center,add(mul(b.right,x*depth*t*aspect),mul(b.up,y*depth*t))))};}
 export function drawCameraView(canvas,pose,aspect=16/9){
  const width=canvas.clientWidth||400,height=canvas.clientHeight||230,dpr=Math.min(globalThis.devicePixelRatio||1,2);

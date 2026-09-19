@@ -1,0 +1,36 @@
+{
+ "version": 1,
+ "source_w": 320,
+ "source_h": 180,
+ "fx_norm": 1.0722534602547793,
+ "pivot": [
+  -0.0014572114334719041,
+  -0.0014572114334719041,
+  1.0000000011923689
+ ],
+ "aim": "source",
+ "az_sign": 1,
+ "splat": 2,
+ "length": 3,
+ "frame_mode": "Freeze Frame",
+ "depth_source": "depth",
+ "w": 320,
+ "h": 180,
+ "z_lo": 1.0,
+ "z_hi": 5.9526824951171875,
+ "samples": [
+  {
+   "t": 0.0,
+   "rgb": {
+    "filename": "sample_rgb.png",
+    "subfolder": "",
+    "type": "temp"
+   },
+   "z": {
+    "filename": "sample_z.png",
+    "subfolder": "",
+    "type": "temp"
+   }
+  }
+ ]
+}

@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>bruxosdovfx · H3 v29 preview</title>
+<title>bruxosdovfx · H3 v30 preview</title>
 <style>
 body{background:#101016;color:#eee;font:15px system-ui;max-width:820px;margin:24px auto;padding:16px}h1{font-size:24px}textarea{box-sizing:border-box;width:100%;height:150px;background:#202027;color:#eee;padding:12px;border:1px solid #555;border-radius:8px}p{color:#aaa;line-height:1.5}label{font-size:12px;color:#bbb}select{background:#222;color:#eee;border:1px solid #555;padding:6px;margin:0 10px 10px 4px;border-radius:5px}.preview-settings{padding:12px 0}main .h3cam{height:auto;min-height:860px}.preview-note{font-size:12px}
 </style>
-<h1>bruxosdovfx · Camera H3 v29</h1>
+<h1>bruxosdovfx · Camera H3 v30</h1>
 <p>PT: Prévia local do painel. As alterações ficam no JSON abaixo; esta página não executa o H3. EN: Local panel preview. Changes are saved in the JSON below; this page does not run H3.</p>
 <div class="preview-settings"><label><span>PT: Interpolação EN: Interpolation</span><select id="interpolation"><option value="smooth">Smooth</option><option value="linear">Linear</option></select></label><label>Prompt<select id="detail"><option value="v15 baseline">v15 baseline</option><option value="extended contracts">extended contracts</option></select></label><label><span>PT: Saída EN: Output</span><select id="task"><option value="scene coverage | camera path">PT: Vídeo EN: Video</option><option value="directed | new camera angle">PT: Imagem · 39 frames EN: Still · 39 frames</option></select></label></div>
 <main></main><p>PT: Trajetória salva pelo node EN: Path saved by the node</p><textarea aria-label="Trajectory JSON" id="trajectory"></textarea>
@@ -14,7 +14,7 @@ import {createCameraEditor} from './web/panel.js';
 import {installLanguage} from './web/language.js';
 const input=document.querySelector('#trajectory');
 input.value=JSON.stringify([{time:0,azimuth:0,elevation:0,distance:1},{time:.5,azimuth:45,elevation:10,distance:1},{time:1,azimuth:90,elevation:0,distance:.8}],null,2);
-let frames=124,frameMode='Freeze Frame',closure='auto',experiment='Off',language='Português';
+let frames=124,frameMode='Freeze Frame',closure='auto',experiment='Off',language='Português',depthAnimation='Off';
 const task=()=>document.querySelector('#task').value;
 let editor;
 const sync=()=>editor?.sync();
@@ -29,9 +29,11 @@ editor=createCameraEditor({
  frameMode:()=>frameMode,setFrameMode:value=>{frameMode=value;sync();},
  loopClosure:()=>closure,setLoopClosure:value=>{closure=value;sync();},
  experimentMode:()=>experiment,setExperimentMode:value=>{experiment=value;sync();},
+ depthWarp:()=>depthAnimation==='Depth Warp',setDepthWarp:value=>{depthAnimation=value;sync();},
  switches:()=>[{label:'Contratos estendidos'+(document.querySelector('#detail').value==='extended contracts'?' ON':' OFF'),on:document.querySelector('#detail').value==='extended contracts',hint:'PT: Usa a mesma curva monotônica na prévia e no prompt, preservando keyframes e evitando ultrapassagem. EN: Uses the same monotone curve in preview and prompt, preserving keyframes without overshoot.',toggle(){const el=document.querySelector('#detail');el.value=el.value==='extended contracts'?'v15 baseline':'extended contracts';sync();}}],
 });
 document.querySelector('main').append(editor.element);
+window.h3Editor=editor;
 installLanguage(editor.element,()=>language,value=>{language=value;document.documentElement.lang=value==='English'?'en':'pt-BR';});
 for(const el of document.querySelectorAll('.preview-settings select'))el.addEventListener('change',sync);
 input.addEventListener('change',sync);

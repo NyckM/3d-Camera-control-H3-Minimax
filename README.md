@@ -9,9 +9,14 @@
 > This is not an official MiniMax or Viggle release.  
 > Este não é um lançamento oficial da MiniMax ou Viggle.
 
+<img width="581" height="1435" alt="image" src="https://github.com/user-attachments/assets/1cdaef43-e001-45be-acd7-9dd884840d7f" />
+
 ---
 
 ## ✨ What is it? / O que é?
+
+
+https://github.com/user-attachments/assets/3c958ca8-9685-440c-afc3-52da9d1f7143
 
 **Meridian Camera H3** connects the camera tools from **bruxosdovfx · Camera H3** with **Viggle Meridian**.
 

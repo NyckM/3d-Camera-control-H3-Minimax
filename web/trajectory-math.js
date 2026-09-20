@@ -1,8 +1,9 @@
 // Signed angles are never normalized during playback / Reprodução preserva voltas e sinais.
-export const AXES = ['azimuth', 'elevation', 'distance', 'height'];
-export const AXIS_DEFAULTS = {azimuth: 0, elevation: 0, distance: 1, height: 0};
+export const AXES = ['azimuth', 'elevation', 'distance', 'height', 'lateral'];
+export const AXIS_DEFAULTS = {azimuth: 0, elevation: 0, distance: 1, height: 0, lateral: 0};
 // height: grua. Sobe e desce a câmera sem girar em torno do alvo, em múltiplos do raio inicial.
 // height: boom. Raises and lowers the camera without orbiting, in units of the starting radius.
+// lateral: truck. Slides the camera sideways along its own right axis, also without orbiting.
 // Trajetórias e presets anteriores à v32 não têm height / paths and presets before v32 have no height.
 export const axis = (point, name) => {const value = point[name]; return value == null ? AXIS_DEFAULTS[name] : value;};
 

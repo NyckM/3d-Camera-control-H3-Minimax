@@ -29,8 +29,11 @@ class Tests(unittest.TestCase):
         self.assertEqual(new.H3Camera.INPUT_TYPES()['optional']['frame_mode'][1]['default'],'Freeze Frame')
         r=self.run_editor();self.assertTrue(r[1]['coverage_loop_closure']);self.assertIn('remain rigid',r[0])
     def test_action_requirements(self):
-        for kw in [dict(reference_image=None),dict(instruction=' '),dict(runtime_task='directed | new camera angle')]:
+        # v32: o texto saiu do node (vai no Camera Prompt Compose); Action Frame agora pede só a imagem.
+        for kw in [dict(reference_image=None),dict(runtime_task='directed | new camera angle')]:
             with self.assertRaises(ValueError):self.run_editor(frame_mode='Action Frame',**kw)
+        r=self.run_editor(frame_mode='Action Frame',instruction='')
+        self.assertIn('<Picture 1>',r[0])
     def test_motion_requires_sequence(self):
         with self.assertRaises(ValueError):self.run_editor(frame_mode='Motion Frame')
     def test_user_text_unchanged(self):

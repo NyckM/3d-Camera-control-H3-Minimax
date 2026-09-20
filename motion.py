@@ -132,7 +132,7 @@ def motion_plan(plan):
     """Apply temporal semantics only to generated fields; user prose stays untouched."""
     action = plan['frame_mode'] == 'Action Frame'
     reference = '<Picture 1>' if action else '<Video 1>'
-    plan['reference'] = (f'Use {reference} as the initial scene and identity reference. Animate the action described by the user while the camera follows its timeline.' if action else
+    plan['reference'] = (f'Use {reference} as the initial scene and identity reference. Animate the action described in this prompt while the camera follows its timeline.' if action else
         'Use <Video 1> as the temporal reference. Preserve its action order and natural progression while changing the camera viewpoint. Do not compress or repeat the action to match camera keyframes.')
     plan['preserve'] = ('Preserve character identity, appearance and scene coherence while allowing poses, expressions, contacts and positions to evolve with the action. Environmental motion continues naturally.' if action else
         'Preserve identities, appearance and scene coherence, and continue the source actions of <Video 1>, including moving people and environmental elements.')
@@ -222,8 +222,9 @@ class H3CameraEditor(base.H3CameraEditor):
         frame_mode=base._choice(frame_mode,MODES,'Freeze Frame')
         if frame_mode!='Freeze Frame' and runtime_task and runtime_task!='scene coverage | camera path':
             raise ValueError('PT: Action/Motion Frame exige runtime_task camera path. EN: Action/Motion Frame requires camera path runtime_task.')
-        if frame_mode=='Action Frame' and (reference_image is None or not instruction.strip()):
-            raise ValueError('PT: Action Frame exige uma imagem e a ação em instruction. EN: Action Frame requires an image and an action in instruction.')
+        if frame_mode=='Action Frame' and reference_image is None:
+            raise ValueError('PT: Action Frame exige uma imagem em reference_image. Descreva a ação no Camera Prompt Compose. '
+                             'EN: Action Frame requires an image in reference_image. Describe the action in Camera Prompt Compose.')
         first,frames,count=prepare_frames(reference_image,frame_mode,source_fps,freeze_index)
         result=list(base.compile_camera(camera_trajectory,profile,interpolation,instruction,subject_framing,minimax_format,first,elevation_range,orbit_direction,subject_box,runtime_task,prompt_detail,allow_closure=frame_mode=='Freeze Frame' and loop_closure=='auto'))
         plan=json.loads(result[2])
@@ -243,7 +244,7 @@ class H3CameraEditor(base.H3CameraEditor):
         closure=bool(result[1].get('coverage_loop_closure'))
         route=('Motion: feed your frame sequence and this minimax_prompt and length to bruxosdovfx H3 Motion Reference; use H3 Ref2VA. Do not use H3 Edit options.' if en else 'Motion: leve a sua sequência de frames junto com este minimax_prompt e length ao bruxosdovfx H3 Motion Reference; use H3 Ref2VA. Não use options do H3 Edit.') if frame_mode=='Motion Frame' else ('Freeze: feed the same image you connected here as the source image. Loop closure requires H3 Edit options and source wiring; native H3 needs separate end-frame wiring.' if en else 'Freeze: use a mesma imagem que você ligou aqui como imagem de origem. Loop closure exige options e imagem no H3 Edit; H3 nativo precisa de ligação separada do último frame.')
         if frame_mode=='Action Frame':
-            route=('Action: connect the source image to your native image-to-video workflow and use minimax_prompt, length and fps. Do not connect H3 Edit options or reuse the initial image as the end frame.' if en else 'Action: conecte a imagem ao workflow nativo de imagem para vídeo e use minimax_prompt, length e fps. Não conecte options do H3 Edit nem repita a imagem inicial como frame final.')
+            route=('Action: describe the action in Camera Prompt Compose, connect the source image to your native image-to-video workflow and use minimax_prompt, length and fps. Do not connect H3 Edit options or reuse the initial image as the end frame.' if en else 'Action: descreva a ação no Camera Prompt Compose, conecte a imagem ao workflow nativo de imagem para vídeo e use minimax_prompt, length e fps. Não conecte options do H3 Edit nem repita a imagem inicial como frame final.')
         raw_path=plan['path'];net=abs(raw_path[-1]['azimuth']-raw_path[0]['azimuth'])
         reasons=[]
         if loop_closure=='off':reasons.append('disabled by user' if en else 'desativado pelo usuário')
@@ -253,7 +254,7 @@ class H3CameraEditor(base.H3CameraEditor):
         for key,pt in [('elevation','elevação'),('distance','distância')]:
             if abs(raw_path[-1][key]-raw_path[0][key])>1e-6:reasons.append(f"{key if en else pt}: {raw_path[-1][key]:g} → {raw_path[0][key]:g}")
         if runtime_task and runtime_task!='scene coverage | camera path':reasons.append('still-image task' if en else 'tarefa de imagem')
-        result[3]=f"bruxosdovfx v30 | {frame_mode} | {result[5]} frames / 24 fps\n"+route+'\nLoop closure '+('ON' if closure else 'OFF')+(': '+', '.join(reasons) if reasons else '')+f"\n{'Source / reference frames' if en else 'Frames da fonte / referência'}: {count} / {source_count}. "+('Reference is resampled to 24 fps and trimmed to 17k+5; up to 16 trailing frames may be omitted. Camera following remains prompt-based.' if en else 'Referência reamostrada para 24 fps e cortada para 17k+5; até 16 frames finais podem ser omitidos. A câmera continua guiada por prompt.')
+        result[3]=f"bruxosdovfx v32 | {frame_mode} | {result[5]} frames / 24 fps\n"+route+'\nLoop closure '+('ON' if closure else 'OFF')+(': '+', '.join(reasons) if reasons else '')+f"\n{'Source / reference frames' if en else 'Frames da fonte / referência'}: {count} / {source_count}. "+('Reference is resampled to 24 fps and trimmed to 17k+5; up to 16 trailing frames may be omitted. Camera following remains prompt-based.' if en else 'Referência reamostrada para 24 fps e cortada para 17k+5; até 16 frames finais podem ser omitidos. A câmera continua guiada por prompt.')
         warnings=review_path(plan['path'],plan['duration_s'],base.ELEVATION_RANGES.get(elevation_range,30))
         plan['diagnostics']=warnings
         result[2]=json.dumps(plan,ensure_ascii=False,indent=2)

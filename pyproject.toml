@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-h3-camera-editor"
-description = "Planejador visual de camera para o MiniMax H3: orbita, elevacao, altura, distancia e keyframes compilados em prompts, com saidas para H3 Edit, para o caminho nativo do H3 e Depth Warp no formato do Viggle Meridian, com conversor de pesos do Meridian para o ComfyUI."
-version = "32.0.0"
+description = "Planejador visual de camera para o MiniMax H3: orbita, elevacao, altura, travelling lateral, distancia e keyframes compilados em prompts, com saidas para H3 Edit, para o caminho nativo do H3 e Depth Warp no formato do Viggle Meridian, com conversor de pesos do Meridian para o ComfyUI."
+version = "33.0.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = []

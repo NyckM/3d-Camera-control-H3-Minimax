@@ -4,11 +4,14 @@ Angles stay unwrapped: 0 -> 360 is a full turn / Ângulos mantêm voltas complet
 """
 import math
 
-AXES = ('azimuth', 'elevation', 'distance', 'height')
-# height: deslocamento vertical da camera em multiplos do raio inicial (grua/boom). Elevation gira em
-# torno do alvo; height sobe e desce sem girar. / height: vertical camera offset in units of the starting
-# radius (boom). Elevation orbits the target; height rises and falls without orbiting.
-DEFAULTS = {'azimuth': 0.0, 'elevation': 0.0, 'distance': 1.0, 'height': 0.0}
+AXES = ('azimuth', 'elevation', 'distance', 'height', 'lateral')
+# height:  deslocamento VERTICAL da camera, em multiplos do raio inicial (grua). Elevation gira em torno
+#          do alvo; height sobe e desce sem girar.
+# lateral: deslocamento HORIZONTAL da camera no eixo dela, em multiplos do raio inicial (travelling).
+#          Azimuth gira em torno do alvo; lateral anda para o lado sem girar.
+# height:  VERTICAL camera offset in units of the starting radius (boom/crane).
+# lateral: HORIZONTAL camera offset along its own right axis (truck/dolly sideways).
+DEFAULTS = {'azimuth': 0.0, 'elevation': 0.0, 'distance': 1.0, 'height': 0.0, 'lateral': 0.0}
 
 
 def axis(point, name):

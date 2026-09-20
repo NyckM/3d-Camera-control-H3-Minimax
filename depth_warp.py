@@ -110,20 +110,26 @@ def rot_y(a):
     return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
 
 
-def orbit_pose(az_deg, el_deg, dist, pivot, aim=None, height=0.0):
+def orbit_pose(az_deg, el_deg, dist, pivot, aim=None, height=0.0, lateral=0.0):
     """+azimuth = camera orbita para a DIREITA, +elevation = camera SOBE (frame OpenCV).
 
     Mesma convencao do HUD do Camera H3, entao a trajetoria do painel entra sem troca de sinal.
+
+    height (grua) e lateral (travelling) transladam a camera na vertical e no eixo horizontal dela,
+    em multiplos da distancia ao pivo, SEM girar. Com aim (mira da fonte) o alvo acompanha, entao a
+    lente mantem a direcao e o sujeito se desloca no quadro; sem aim a camera translada e inclina
+    para continuar olhando o pivo.
     """
     pivot = np.asarray(pivot, dtype=np.float64)
     R_orbit = rot_y(np.radians(-az_deg)) @ rot_x(np.radians(-el_deg))
     eye = pivot + dist * (R_orbit @ (-pivot))
     target = pivot if aim is None else np.asarray(aim, dtype=np.float64)
-    if height:
-        # Grua: translacao vertical pura. OpenCV tem +y para baixo, entao subir e subtrair em y.
-        # Com mira da fonte o alvo sobe junto (a lente nao gira e o sujeito desce no quadro);
-        # com mira no pivo a camera sobe e inclina para continuar olhando o pivo.
-        shift = np.array([0.0, -float(height) * float(np.linalg.norm(pivot)), 0.0])
+    if height or lateral:
+        radius = float(np.linalg.norm(pivot))
+        # Grua: vertical pura (OpenCV tem +y para baixo, entao subir e subtrair em y).
+        # Travelling: ao longo do eixo direito da camera JA girada, que e o "para o lado" dela.
+        right = R_orbit @ np.array([1.0, 0.0, 0.0])
+        shift = np.array([0.0, -float(height) * radius, 0.0]) + float(lateral) * radius * right
         eye = eye + shift
         if aim is not None:
             target = target + shift
@@ -730,7 +736,8 @@ def build_depth_warp(plan, frame_mode, reference_image, depth=None, moge_geometr
     off_dist = float(offset_distance) if offset_distance and offset_distance > 0 else 1.0
     if off_az or off_el or off_dist != 1.0:
         poses = [{'azimuth': p['azimuth'] + off_az, 'elevation': p['elevation'] + off_el,
-                  'distance': p['distance'] * off_dist, 'height': p.get('height', 0.0)} for p in poses]
+                  'distance': p['distance'] * off_dist, 'height': p.get('height', 0.0),
+                  'lateral': p.get('lateral', 0.0)} for p in poses]
     geo = None
     if meridian:
         if n not in MERIDIAN_LENGTHS:
@@ -788,7 +795,7 @@ def build_depth_warp(plan, frame_mode, reference_image, depth=None, moge_geometr
             cache_rgbz[src] = (rgb, z)
         pose = poses[i]
         C = orbit_pose(pose['azimuth'], pose['elevation'], pose['distance'], pivot, aim_point,
-                       pose.get('height', 0.0))
+                       pose.get('height', 0.0), pose.get('lateral', 0.0))
         frame, hole = cache[src].render(C)
         warp[i] = _as_float(frame, allocate)
         holes[i] = _as_float_mask(hole, allocate)

@@ -1,4 +1,4 @@
-// node tests/test_v32_height_panel.cjs — altura no painel: card próprio, edição, JSON e prévia do warp.
+// node tests/test_v32_height_panel.cjs — altura e travelling lateral no painel: cards, edição, JSON e prévia.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('http'),fs=require('fs'),path=require('path'),os=require('os'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
@@ -15,7 +15,7 @@ try{
   await page.waitForTimeout(200);
   // quatro cards: o que gira em cima, o que desloca embaixo
   const cards=await page.$$eval('.controls > div',els=>els.map(e=>e.querySelector('.heading').textContent.trim()));
-  assert.deepEqual(cards,['Órbita','Elevação','Distância','Altura']);
+  assert.deepEqual(cards,['Órbita','Elevação','Distância','Altura','Lateral']);
   // o disco de órbita cabe inteiro no card (a alça fica na borda)
   assert.ok(await page.$eval('.dial',d=>{const r=d.getBoundingClientRect(),c=d.closest('div').getBoundingClientRect();return r.bottom<=c.bottom+.5&&r.top>=c.top-.5;}),'dial clipped');
   // keyframe 1 é a fonte: altura travada
@@ -39,12 +39,20 @@ try{
   const shot=()=>page.locator('.camera-view canvas').evaluate(c=>c.toDataURL());
   const low=await shot();
   await page.locator('input.number[data-field=height]').fill('0.6');await page.waitForTimeout(150);
-  assert.notEqual(await shot(),low,'boom must reproject the preview');
+  const high=await shot();
+  assert.notEqual(high,low,'boom must reproject the preview');
+  // v33: travelling lateral é outro eixo e também reprojeta
+  await page.locator('input.number[data-field=lateral]').fill('0.5');await page.waitForTimeout(150);
+  assert.notEqual(await shot(),high,'truck must reproject the preview');
+  assert.equal(JSON.parse(await page.locator('#trajectory').inputValue())[1].lateral,0.5);
+  await page.locator('input.number[data-field=lateral]').fill('9');await page.waitForTimeout(120);
+  assert.equal(JSON.parse(await page.locator('#trajectory').inputValue())[1].lateral,3);
+  await page.locator('input.number[data-field=lateral]').fill('0');await page.waitForTimeout(120);
   // idioma chinês traduz o painel
   await page.locator('select[aria-label="Idioma / Language"]').selectOption('中文');
   await page.waitForTimeout(120);
   const zh=await page.$$eval('.controls > div',els=>els.map(e=>e.querySelector('.heading').textContent.trim()));
-  assert.deepEqual(zh,['环绕','仰角','距离','升降']);
+  assert.deepEqual(zh,['环绕','仰角','距离','升降','横移']);
   await page.screenshot({path:path.join(os.tmpdir(),'h3_v32_height.png')});
   assert.deepEqual(errors,[]);
   console.log('v32 height panel: ok');

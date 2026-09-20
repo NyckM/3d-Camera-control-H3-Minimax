@@ -4,7 +4,7 @@
 export const LANGUAGES=['Português','English','中文'];
 const CHINESE=new Map(Object.entries({
  'CÂMERA H3':'H3 摄像机','Frame congelado':'冻结帧','Frame em movimento':'运动帧','Animar imagem':'动画图像',
- 'Duração':'时长','Azimute':'方位角','Elevação':'仰角','Distância':'距离','Altura':'升降','Órbita':'环绕',
+ 'Duração':'时长','Azimute':'方位角','Elevação':'仰角','Distância':'距离','Altura':'升降','Lateral':'横移','Órbita':'环绕',
  'Keyframes':'关键帧','↺ Reiniciar':'↺ 重置','⟳ Órbita pura':'⟳ 纯环绕','⟲ Fechar volta':'⟲ 闭合环绕',
  '− Remover ponto':'− 删除关键帧','+ Keyframe agora':'+ 添加关键帧','Imagem / vídeo':'图像 / 视频',
  'Visão da câmera':'摄像机视角','◈ Depth Warp':'◈ 深度变形','Ampliar canvas':'放大画布','Restaurar vista':'重置视角',
@@ -15,7 +15,7 @@ const CHINESE=new Map(Object.entries({
 }));
 const pairs=[
  ['CAMERA H3','CÂMERA H3'],['Freeze Frame','Frame congelado'],['Motion Frame','Frame em movimento'],
- ['Duração','Duration'],['Azimuth','Azimute'],['Elevation','Elevação'],['Distance','Distância'],['Height','Altura'],
+ ['Duração','Duration'],['Azimuth','Azimute'],['Elevation','Elevação'],['Distance','Distância'],['Height','Altura'],['Lateral','Lateral'],
  ['↺ Reiniciar','↺ Reset'],['⟳ Órbita pura','⟳ Pure orbit'],['Fechar volta','Close orbit'],
  ['⟲ Fechar volta','⟲ Close orbit'],['− Remover ponto','− Remove point'],['Órbita','Orbit'],
  ['Imagem de referência','Reference image'],['Remover keyframe','Remove keyframe'],['Testes','Tests'],
@@ -32,7 +32,7 @@ const pairs=[
  ['Motion Frame · loop closure OFF · ação continua / action continues','Motion Frame · loop closure OFF · action continues'],
  ['Keyframes','Keyframes'],['Referência: nenhuma','Reference: none'],
  ['Azimuth degrees','Graus de azimute'],['Elevation degrees','Graus de elevação'],
- ['Elevation slider','Controle de elevação'],['Camera distance','Distância da câmera'],['Camera height','Altura da câmera'],['Height slider','Controle de altura'],
+ ['Elevation slider','Controle de elevação'],['Camera distance','Distância da câmera'],['Camera height','Altura da câmera'],['Height slider','Controle de altura'],['Camera lateral','Travelling lateral'],['Lateral slider','Controle de travelling'],
  ['Distance slider','Controle de distância'],['Remove selected keyframe','Remover keyframe selecionado'],
  ['Modo de referência / Reference mode','Reference mode'],
 ];

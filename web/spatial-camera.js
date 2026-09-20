@@ -9,7 +9,9 @@ const unit=a=>mul(a,1/Math.max(1e-12,Math.hypot(...a)));
 export function position(p){const a=rad(p.azimuth),e=rad(p.elevation),r=p.distance*1.8;return [Math.sin(a)*Math.cos(e)*r,Math.sin(e)*r,Math.cos(a)*Math.cos(e)*r];}
 // A órbita fica em position(); a grua entra só no olho, então arrastar não mistura os eixos.
 // position() stays pure orbit; the boom only shifts the eye, so dragging never mixes the axes.
-export const eyeOf=p=>{const e=position(p);return [e[0],e[1]+(p.height||0)*1.8,e[2]];};
+export const eyeOf=p=>{const e=position(p),a=rad(p.azimuth),l=(p.lateral||0)*1.8;
+  // travelling: eixo direito da camera ja girada / truck: right axis of the rotated camera
+  return [e[0]+Math.cos(a)*l,e[1]+(p.height||0)*1.8,e[2]-Math.sin(a)*l];};
 export function observerBasis(yaw,pitch){return {right:[Math.cos(yaw),0,-Math.sin(yaw)],up:[-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)],depth:[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)]};}
 export function dragOrbit(original,dx,dy,scale,yaw,pitch,limit=89){
   // Orthographic pointer ray intersects a sphere about the subject. Preserve the

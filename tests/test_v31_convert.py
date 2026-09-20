@@ -352,6 +352,54 @@ class TransformerCompression(unittest.TestCase):
             self.assertTrue(np.allclose(out[key], lora.bf(a) @ basis, atol=1e-5))
 
 
+class Spectrum(unittest.TestCase):
+    """A medição que decide se vale extrair uma LoRA: delta de posto baixo tem que aparecer como tal."""
+
+    def files(self, tmp, delta):
+        base = f32(96, 64)
+        write(Path(tmp) / 'base.safetensors', {'blocks.0.attn.qkv_proj.weight': (base, 'BF16')})
+        write(Path(tmp) / 'tuned.safetensors', {'blocks.0.attn.qkv_proj.weight': (base + delta, 'BF16')})
+        return str(Path(tmp) / 'base.safetensors'), str(Path(tmp) / 'tuned.safetensors')
+
+    def test_low_rank_delta_is_recognised(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            delta = (f32(96, 8) @ f32(8, 64)) * 3          # posto 8 exato
+            base, tuned = self.files(tmp, delta)
+            out = mc.spectrum(base, tuned, keys=['blocks.0.attn.qkv_proj.weight'], ranks=(8, 32),
+                              report=lambda *a: None)
+            self.assertGreater(out[8], 0.98)
+            self.assertGreater(out[32], 0.99)
+
+    def test_full_rank_delta_is_recognised(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base, tuned = self.files(tmp, f32(96, 64) * 3)  # ruído: posto cheio
+            out = mc.spectrum(base, tuned, keys=['blocks.0.attn.qkv_proj.weight'], ranks=(8, 32),
+                              report=lambda *a: None)
+            self.assertLess(out[8], 0.45)
+            self.assertLess(out[32], 0.95)
+
+    def test_randomised_svd_matches_exact_values(self):
+        # Matriz gaussiana é o pior caso (espectro achatado); o que usamos é a energia acumulada.
+        matrix = f32(120, 80)
+        exact = np.linalg.svd(matrix, compute_uv=False)
+        approx = mc.top_singular_values(matrix, 16)
+        self.assertTrue(np.allclose(exact[:5], approx[:5], rtol=0.02), (exact[:3], approx[:3]))
+        energy = lambda v: float((v[:16].astype(np.float64) ** 2).sum())
+        self.assertAlmostEqual(energy(approx) / energy(exact), 1.0, delta=0.03)
+        # num delta de posto baixo, a aproximação é praticamente exata
+        low = f32(120, 6) @ f32(6, 80)
+        self.assertTrue(np.allclose(np.linalg.svd(low, compute_uv=False)[:6],
+                                    mc.top_singular_values(low, 6)[:6], rtol=1e-3))
+
+    def test_refuses_incompatible_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write(Path(tmp) / 'a.safetensors', {'blocks.0.attn.qkv_proj.weight': (f32(96, 64), 'BF16')})
+            write(Path(tmp) / 'b.safetensors', {'outra.weight': (f32(96, 64), 'BF16')})
+            with self.assertRaises(ValueError):
+                mc.spectrum(str(Path(tmp) / 'a.safetensors'), str(Path(tmp) / 'b.safetensors'),
+                            keys=['blocks.0.attn.qkv_proj.weight'], report=lambda *a: None)
+
+
 class Bf16Codec(unittest.TestCase):
     def test_known_bit_patterns(self):
         bits = np.array([0x3F80, 0x4000, 0xBF80, 0x3FC0, 0x0000, 0xC120], dtype=np.uint16)

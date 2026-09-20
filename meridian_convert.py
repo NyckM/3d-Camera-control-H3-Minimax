@@ -721,11 +721,71 @@ def convert_text_embeds(source, destination, report=print):
     return destination
 
 
+# =============================================================================
+# Espectro do delta: uma LoRA de posto r consegue carregar este fine-tune?
+# =============================================================================
+
+DEFAULT_PROBE = ('blocks.0.attn.qkv_proj.weight', 'blocks.0.mlp.fc1.weight', 'blocks.0.attn.out_proj.weight',
+                 'blocks.25.attn.qkv_proj.weight', 'blocks.25.mlp.fc1.weight',
+                 'blocks.49.attn.qkv_proj.weight', 'blocks.49.mlp.fc1.weight')
+DEFAULT_RANKS = (32, 64, 128, 256)
+
+
+def top_singular_values(matrix, rank, oversample=16, iterations=2, seed=0):
+    """Maiores valores singulares por SVD aleatorizada: o SVD completo dessas matrizes levaria horas."""
+    rows, cols = matrix.shape
+    size = min(rank + oversample, cols, rows)
+    sketch = np.random.default_rng(seed).standard_normal((cols, size)).astype(np.float32)
+    basis = matrix @ sketch
+    for _ in range(iterations):          # iterações de potência: separam melhor os valores próximos
+        basis = matrix @ (matrix.T @ basis)
+    basis, _ = np.linalg.qr(basis)
+    return np.linalg.svd(basis.T @ matrix, compute_uv=False)
+
+
+def spectrum(base, tuned, keys=None, ranks=DEFAULT_RANKS, report=print):
+    """Quanta energia do delta (tuned - base) cabe nos primeiros valores singulares.
+
+    Energia alta em posto baixo => uma LoRA desse posto reproduz quase todo o fine-tune.
+    Energia baixa => o fine-tune é de posto alto e a LoRA vai perder comportamento.
+    """
+    a, b = SafeSet(base), SafeSet(tuned)
+    probe = [k for k in (keys or DEFAULT_PROBE) if k in a.info and k in b.info and a.shape(k) == b.shape(k)]
+    missing = [k for k in (keys or DEFAULT_PROBE) if k not in probe]
+    if missing:
+        report(f'ignoradas {len(missing)} chaves ausentes ou de forma diferente / skipped: {missing[:3]}')
+    if not probe:
+        raise ValueError('PT: nenhuma camada em comum. Os dois arquivos estão no formato do ComfyUI? '
+                         'EN: no layer in common. Are both files in ComfyUI layout?')
+    totals = {r: [] for r in ranks}
+    report(f"{'camada':34} {'|Δ|/|W|':>8} " + ' '.join(f'r={r:<6}' for r in ranks))
+    for key in probe:
+        base_w = decode_float(a.raw(key), a.dtype(key)).reshape(a.shape(key)).astype(np.float32)
+        delta = decode_float(b.raw(key), b.dtype(key)).reshape(b.shape(key)).astype(np.float32) - base_w
+        energy = float((delta.astype(np.float64) ** 2).sum())
+        relative = math.sqrt(energy) / max(math.sqrt(float((base_w.astype(np.float64) ** 2).sum())), 1e-12)
+        values = top_singular_values(delta, max(ranks))
+        line = f'{key[:34]:34} {relative:8.3f} '
+        for r in ranks:
+            captured = float((values[:r].astype(np.float64) ** 2).sum()) / max(energy, 1e-12)
+            totals[r].append(captured)
+            line += f'{100 * captured:6.1f}% '
+        report(line)
+    report('')
+    for r in ranks:
+        mean = 100 * sum(totals[r]) / len(totals[r])
+        verdict = ('uma LoRA desse posto carrega o fine-tune / a LoRA of this rank carries the finetune' if mean >= 90 else
+                   'perde comportamento; considere posto maior / loses behaviour; consider a higher rank' if mean >= 70 else
+                   'posto alto demais para LoRA / the finetune is too high-rank for a LoRA')
+        report(f'posto {r:4}: {mean:5.1f}% da energia — {verdict}')
+    return {r: sum(v) / len(v) for r, v in totals.items()}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('mode', choices=('lora', 'transformer', 'text'))
+    parser.add_argument('mode', choices=('lora', 'transformer', 'text', 'spectrum'))
     parser.add_argument('source')
-    parser.add_argument('destination')
+    parser.add_argument('destination', help='no modo spectrum: o segundo modelo (o fine-tune) / in spectrum mode: the second model (the finetune)')
     parser.add_argument('--pruned', action='store_true',
                         help='LoRA para uma base podada (curve-form)')
     parser.add_argument('--adaln-basis', default=None,
@@ -737,6 +797,9 @@ def main(argv=None):
     parser.add_argument('--adaln-rank', type=int, default=ADALN_RANK)
     parser.add_argument('--adaln-grid', type=int, default=ADALN_GRID)
     args = parser.parse_args(argv)
+    if args.mode == 'spectrum':
+        spectrum(args.source, args.destination)
+        return
     if args.mode == 'lora':
         convert_lora(args.source, args.destination, pruned=args.pruned, adaln_basis_path=args.adaln_basis)
     elif args.mode == 'transformer':

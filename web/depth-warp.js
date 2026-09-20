@@ -33,10 +33,13 @@ export function orbitCamera(pose, pivot, aim = 'source', azSign = 1) {
   const eye = [pivot[0] + pose.distance*back[0], pivot[1] + pose.distance*back[1], pivot[2] + pose.distance*back[2]];
   let target = aim === 'source' ? [0, 0, norm(pivot)] : pivot;
   // Grua: +y é para baixo no frame OpenCV, então subir a câmera é subtrair em y.
-  const boom = (pose.height || 0) * norm(pivot);
-  if (boom) {
-    eye[1] -= boom;
-    if (aim === 'source') target = [target[0], target[1] - boom, target[2]];
+  // Travelling: eixo direito da câmera já girada, o mesmo que o Python usa.
+  const radius = norm(pivot), boom = (pose.height || 0) * radius, truck = (pose.lateral || 0) * radius;
+  if (boom || truck) {
+    const right = apply3(R, [1, 0, 0]);
+    const shift = [truck * right[0], -boom + truck * right[1], truck * right[2]];
+    eye[0] += shift[0]; eye[1] += shift[1]; eye[2] += shift[2];
+    if (aim === 'source') target = [target[0] + shift[0], target[1] + shift[1], target[2] + shift[2]];
   }
   return lookAt(eye, target);
 }
@@ -116,7 +119,8 @@ export async function loadDepthPreview(meta, urlFor) {
 export function composePose(pose, meta, offset) {
   const off = offset || { azimuth: 0, elevation: 0, distance: 1 };
   return { azimuth: pose.azimuth * (meta.az_sign || 1) + (off.azimuth || 0), elevation: pose.elevation + (off.elevation || 0),
-           distance: pose.distance * (off.distance > 0 ? off.distance : 1), height: pose.height || 0 };
+           distance: pose.distance * (off.distance > 0 ? off.distance : 1), height: pose.height || 0,
+           lateral: pose.lateral || 0 };
 }
 
 export function drawDepthWarp(canvas, pose, state, playhead = 0, offset = null) {

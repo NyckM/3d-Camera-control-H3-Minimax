@@ -1,6 +1,9 @@
 import { installLanguage } from './language.js';
 import { app } from '../../scripts/app.js';
-import { migrateGraph } from './legacy-workflow.js';
+import { migrateGraph, packValues, applyValues, VALUES_KEY } from './legacy-workflow.js';
+const NODE_ID='BruxosH3Camera';
+const CAMERA_WIDGETS=[];
+const CAMERA_SPEC={};
 import { api } from '../../scripts/api.js';
 import { createCameraEditor } from './panel.js';
 import { resolveLinkedImage } from './linked-image.js';
@@ -11,7 +14,7 @@ app.registerExtension({
   // EN: repairs pre-v32 workflows before the graph is built (values and wires).
   beforeConfigureGraph(graphData){
     try{
-      const report=migrateGraph(graphData);
+      const report=migrateGraph(graphData,CAMERA_WIDGETS,CAMERA_SPEC);
       if(report.nodes)console.info(`[Camera H3] workflow anterior à v32 migrado: ${report.nodes} node(s), ${report.links} ligação(ões) realinhada(s)`+(report.dropped?`, ${report.dropped} removida(s)`:''));
       for(const text of report.texts)console.info('[Camera H3] o widget instruction saiu na v32. O texto era:',text);
     }catch(error){console.warn('[Camera H3] migração do workflow falhou',error);}
@@ -64,6 +67,41 @@ app.registerExtension({
       return result;
     };
     // PT: a execução devolve os PNGs da prévia do Depth Warp. EN: execution returns the Depth Warp preview PNGs.
+    if(nodeData?.name===NODE_ID&&nodeData?.input){
+      // PT: guarda o que cada widget aceita hoje; a migração usa isso para achar a leitura certa
+      // dos valores antigos em vez de adivinhar a versão do workflow.
+      CAMERA_WIDGETS.length=0;
+      for(const group of ['required','optional']){
+        for(const [name,spec] of Object.entries(nodeData.input?.[group]||{})){
+          const type=spec?.[0];
+          const options=spec?.[1]||{};
+          if(Array.isArray(type)){CAMERA_WIDGETS.push(name);CAMERA_SPEC[name]={options:type,default:options.default};}
+          else if(type==='INT'||type==='FLOAT'){CAMERA_WIDGETS.push(name);CAMERA_SPEC[name]={numeric:true,default:options.default};}
+          else if(type==='BOOLEAN'){CAMERA_WIDGETS.push(name);CAMERA_SPEC[name]={boolean:true,default:options.default};}
+          else if(type==='STRING'){CAMERA_WIDGETS.push(name);CAMERA_SPEC[name]={};}
+        }
+      }
+    }
+    // PT: grava e lê os valores por NOME, além da lista posicional do ComfyUI. Isto encerra a classe
+    // de bug em que acrescentar ou remover um widget embaralhava workflows salvos.
+    // EN: stores and reads values BY NAME besides ComfyUI's positional list, ending the class of bug
+    // where adding or removing a widget scrambled saved workflows.
+    const serialize=nodeType.prototype.onSerialize;
+    nodeType.prototype.onSerialize=function(info){
+      const r=serialize?.apply(this,arguments);
+      try{(info.properties??(info.properties={}))[VALUES_KEY]=packValues(this.widgets);}catch(e){}
+      return r;
+    };
+    const configured=nodeType.prototype.onConfigure;
+    nodeType.prototype.onConfigure=function(info){
+      const r=configured?.apply(this,arguments);
+      try{
+        const saved=info?.properties?.[VALUES_KEY];
+        const restored=applyValues(this.widgets,saved);
+        if(restored)this.setDirtyCanvas?.(true,true);
+      }catch(error){console.warn('[Camera H3] valores por nome',error);}
+      return r;
+    };
     const executed=nodeType.prototype.onExecuted;
     nodeType.prototype.onExecuted=function(message){
       const r=executed?.apply(this,arguments);

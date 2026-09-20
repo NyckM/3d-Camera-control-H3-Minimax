@@ -24,6 +24,8 @@ class FakeTorch:
 
 
 class FakeCore:
+    CANVAS_MULTIPLE = 32
+
     @staticmethod
     def temporal_shape(length):
         return length, (length - 5) // 17 + 1, round(length / 24 * 50)
@@ -60,7 +62,7 @@ class ReferenceTests(unittest.TestCase):
     def test_reference_order_and_canvas(self):
         source = self.clip(124, 1080, 1920)
         warp = self.clip(124)  # já sai 832x480 do Camera H3
-        cond, latent, report = mn.MeridianReference().build(source, warp, self.text, FakeVae(), 124)
+        cond, latent, report = mn.MeridianReference().build(source, warp, FakeVae(), 124, text_cond=self.text)
         refs = cond[0][1]['minimax_refs']
         self.assertEqual(len(refs), 2)
         self.assertEqual([r['kind'] for r in refs], ['video', 'video'])
@@ -77,23 +79,90 @@ class ReferenceTests(unittest.TestCase):
 
     def test_portrait_bucket(self):
         cond, latent, _ = mn.MeridianReference().build(self.clip(73, 1920, 1080), self.clip(73, 832, 480),
-                                                       self.text, FakeVae(), 73)
+                                                       FakeVae(), 73, text_cond=self.text)
         self.assertEqual(cond[0][1]['minimax_refs'][0]['latent_w'], 480 // 16)
         self.assertEqual(latent['samples']['video'].shape[-2:], (1344 // 16, 768 // 16))
 
     def test_short_source_is_held(self):
-        cond, _, report = mn.MeridianReference().build(self.clip(100), self.clip(124), self.text, FakeVae(), 124)
+        cond, _, report = mn.MeridianReference().build(self.clip(100), self.clip(124), FakeVae(), 124, text_cond=self.text)
         self.assertIn('último frame', report)
         self.assertEqual(cond[0][1]['minimax_refs'][0]['latent_t'], (124 - 5) // 17 + 1)
 
     def test_errors(self):
         with self.assertRaises(ValueError):  # duração sem embedding
-            mn.MeridianReference().build(self.clip(121), self.clip(121), self.text, FakeVae(), 121)
+            mn.MeridianReference().build(self.clip(121), self.clip(121), FakeVae(), 121, text_cond=self.text)
         with self.assertRaises(ValueError):  # warp com outro comprimento
-            mn.MeridianReference().build(self.clip(124), self.clip(73), self.text, FakeVae(), 124)
+            mn.MeridianReference().build(self.clip(124), self.clip(73), FakeVae(), 124, text_cond=self.text)
+
+    def test_prompt_replaces_the_frozen_embedding(self):
+        embeds = np.zeros((1, 88, 8), dtype=np.float32)
+        tags = np.ones(88, dtype=np.int64)
+        cond, _, report = mn.MeridianReference().build(self.clip(73), self.clip(73, 832, 480), FakeVae(), 73,
+                                                       prompt=[[embeds, {'minimax_token_tags': tags}]])
+        self.assertIs(cond[0][0], embeds)
+        self.assertIs(cond[0][1]['minimax_token_tags'], tags)
+        self.assertIn('prompt (1, 88, 8)', report)
+        with self.assertRaises(ValueError):   # conditioning de outro modelo, sem token tags
+            mn.MeridianReference().build(self.clip(73), self.clip(73, 832, 480), FakeVae(), 73,
+                                         prompt=[[embeds, {}]])
+        with self.assertRaises(ValueError):   # nem embedding nem prompt
+            mn.MeridianReference().build(self.clip(73), self.clip(73, 832, 480), FakeVae(), 73)
+
+    def test_image_references_come_first_and_warn_without_clip(self):
+        """Ordem do H3: imagens antes dos vídeos. A numeração é por tipo, então o warp segue <Video 2>."""
+        cond, _, report = mn.MeridianReference().build(self.clip(73), self.clip(73, 832, 480), FakeVae(), 73,
+                                                       text_cond=self.text,
+                                                       ref_image_1=np.zeros((1, 1024, 768, 3), dtype=np.float32),
+                                                       ref_image_2=np.zeros((1, 512, 512, 3), dtype=np.float32))
+        refs = cond[0][1]['minimax_refs']
+        self.assertEqual([r['kind'] for r in refs], ['image', 'image', 'video', 'video'])
+        self.assertIn('<Picture 1>', report)
+        self.assertIn('<Picture 2>', report)
+        self.assertIn('NÃO ao text encoder', report)   # sem clip, a etiqueta não aponta para nada
+
+    def test_image_dimensions_are_patch_safe(self):
+        """O H3 empacota em blocos 2x2: lado múltiplo de 32, latente par. Com 16 o patchify quebra."""
+        for h, w in ((1024, 768), (1080, 1920), (713, 457), (37, 61), (2000, 1333)):
+            cond, _, _ = mn.MeridianReference().build(self.clip(73), self.clip(73, 832, 480), FakeVae(), 73,
+                                                      text_cond=self.text,
+                                                      ref_image_1=np.zeros((1, h, w, 3), dtype=np.float32))
+            block = cond[0][1]['minimax_refs'][0]
+            self.assertEqual(block['kind'], 'image')
+            for key in ('latent_h', 'latent_w'):
+                self.assertEqual(block[key] % 2, 0, f'{key} ímpar para {w}x{h}: patchify_video vai falhar')
+                self.assertGreaterEqual(block[key], 2)
+
+    def test_clip_path_presents_every_reference(self):
+        seen = {}
+
+        class FakeClip:
+            def tokenize(self, text, minimax_ref_items=None):
+                seen['text'] = text; seen['items'] = minimax_ref_items
+                return 'tokens'
+
+            def encode_from_tokens_scheduled(self, tokens):
+                seen['tokens'] = tokens
+                return [[np.zeros((1, 12, 8), dtype=np.float32), {'minimax_token_tags': np.zeros(12)}]]
+
+        cond, _, report = mn.MeridianReference().build(
+            self.clip(73), self.clip(73, 832, 480), FakeVae(), 73, clip=FakeClip(),
+            prompt_text='<Picture 1> is the subject', ref_image_1=np.zeros((1, 512, 512, 3), dtype=np.float32),
+            ref_video_3=self.clip(73, 832, 480))
+        self.assertEqual(seen['text'], '<Picture 1> is the subject')
+        self.assertEqual([i['type'] for i in seen['items']], ['image', 'video', 'video', 'video'])
+        self.assertEqual([r['kind'] for r in cond[0][1]['minimax_refs']], ['image', 'video', 'video', 'video'])
+        self.assertIn('timestamps', seen['items'][1])                    # o vídeo vai a 2 fps
+        self.assertEqual(len(seen['items'][1]['timestamps']), 7)         # 73 frames / 12
+        self.assertIn('minimax_token_tags', cond[0][1])
+        self.assertIn('experimental', report)
+
+    def test_only_one_text_source(self):
+        with self.assertRaises(ValueError):
+            mn.MeridianReference().build(self.clip(73), self.clip(73, 832, 480), FakeVae(), 73,
+                                         text_cond=self.text, prompt=[[np.zeros((1, 8, 8)), {'minimax_token_tags': 1}]])
 
     def test_manual_canvas_override(self):
-        _, latent, _ = mn.MeridianReference().build(self.clip(73), self.clip(73), self.text, FakeVae(), 73,
+        _, latent, _ = mn.MeridianReference().build(self.clip(73), self.clip(73), FakeVae(), 73, text_cond=self.text,
                                                     width=1024, height=576)
         self.assertEqual(latent['samples']['video'].shape[-2:], (576 // 16, 1024 // 16))
 

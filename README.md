@@ -50,8 +50,8 @@ O repositório inclui **dois workflows do Meridian**.
 
 | Workflow | Base | Main advantage / Principal vantagem | Recommended for / Recomendado para |
 |---|---|---|---|
-| **Meridian INT8 — Quality** | Converted Meridian diffusion model | **Best quality in our current workflow** / **Melhor qualidade no workflow atual** | Final renders / renders finais |
-| **Meridian LoRA — H3 Base** | Standard MiniMax H3 + Meridian LoRAs | Keeps the normal H3 model, prompt and reference pipeline / Mantém o modelo H3, prompt e referências | Flexibility, testing and H3 integration / flexibilidade e integração com H3 |
+| **Meridian INT8 — Quality** | Converted Meridian INT8 diffusion model | **Best quality in our current tests** / **Melhor qualidade nos testes atuais** | Final renders / renders finais |
+| **Meridian LoRA — Standard H3** | Official MiniMax H3 `FL2VA` base + Meridian Teacher + Turbo LoRAs | Keeps the original H3 base and the official Meridian adapter structure / Mantém a base H3 original e a estrutura oficial de adaptadores do Meridian | Lighter setup, compatibility and experimentation / setup mais leve, compatibilidade e experimentação |
 
 ---
 
@@ -126,9 +126,9 @@ meridian_fixed_embed_<frames>.safetensors
 ### Lighter and more flexible  
 ### Mais leve e mais flexível
 
-This workflow keeps the **standard MiniMax H3 model** and applies the Meridian adapters on top of it.
+This workflow keeps the **official MiniMax H3 FL2VA transformer** as the base and applies the two official Meridian adapters on top of it.
 
-Este workflow mantém o **modelo MiniMax H3 padrão** e aplica os adaptadores do Meridian sobre ele.
+Este workflow mantém o **transformer oficial MiniMax H3 FL2VA** como base e aplica sobre ele os dois adaptadores oficiais do Meridian.
 
 ```text
 Standard MiniMax H3
@@ -144,17 +144,20 @@ Meridian conditioning
 H3 generation
 ```
 
-Example base used in the included workflow:
+Official base for the LoRA workflow / Base oficial para o workflow LoRA:
 
 ```text
-Minimax-h3_Singularity_ref2va_Pruned_v1.3_int8.safetensors
+minimax_h3_fl2va_bf16.safetensors
 ```
+
+> **Important / Importante:** use the **FL2VA** base for the official Meridian LoRAs. Do not use the H3 `ref2va` checkpoint as the base for these adapters.  
+> Use a base **FL2VA** para as LoRAs oficiais do Meridian. Não use o checkpoint H3 `ref2va` como base desses adaptadores.
 
 Meridian adapters:
 
 ```text
-meridian_teacher_comfyui.safetensors
-meridian_turbo_comfyui.safetensors
+meridian_teacher_lora.safetensors
+meridian_turbo_lora.safetensors
 ```
 
 ### Why use it? / Por que usar?
@@ -397,44 +400,105 @@ For a common working setup:
 
 # 📦 Models / Modelos
 
-Meridian-specific files:
+## Download hub / Central de downloads
+
+### Bruxos do VFX — Meridian INT8 build
 
 https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main
 
-## Quality workflow
+### Official Viggle Meridian / Meridian oficial
 
-| File | Folder |
-|---|---|
-| `MeridianH3Camera_int8_pruned.safetensors` | `ComfyUI/models/diffusion_models/H3camera/` |
-| `meridian_dmd_lora_comfyui.safetensors` | `ComfyUI/models/loras/` |
-| `minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors` | `ComfyUI/models/loras/` |
-| `minimax_h3_video_vae_int8_convrot.safetensors` | `ComfyUI/models/vae/` |
-| `meridian_fixed_embed_<frames>.safetensors` | Meridian text-embed folder |
-| `moge_2_vitl_normal.safetensors` | MoGe model folder |
+https://huggingface.co/Viggle/Meridian
 
-H3 3-step LoRA:
+### Comfy-Org MiniMax H3
 
-https://huggingface.co/Kijai/MiniMax-H3_comfy/tree/main/loras
+https://huggingface.co/Comfy-Org/MiniMax-H3
 
-H3 Video VAE:
+---
 
-https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae
+## 🟣 Quality workflow — converted Meridian INT8
 
-## LoRA workflow
+| Component / Componente | File / Arquivo | Folder / Pasta | Download |
+|---|---|---|---|
+| Meridian INT8 diffusion model | `MeridianH3Camera_int8_pruned.safetensors` | `ComfyUI/models/diffusion_models/H3camera/` | [Bruxos do VFX — diffusion_models](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main/diffusion_models/H3camera) |
+| Meridian DMD LoRA | `meridian_dmd_lora_comfyui.safetensors` | `ComfyUI/models/loras/` | [Bruxos do VFX — LoRA](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/blob/main/lora/meridian_dmd_lora_comfyui.safetensors) |
+| H3 3-step LoRA | `minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors` | `ComfyUI/models/loras/` | [Kijai — MiniMax-H3 LoRAs](https://huggingface.co/Kijai/MiniMax-H3_comfy/tree/main/loras) |
+| H3 Video VAE INT8 | `minimax_h3_video_vae_int8_convrot.safetensors` | `ComfyUI/models/vae/` | [Comfy-Org — VAE](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae) |
+| Meridian fixed text embed | `meridian_fixed_embed_<frames>.safetensors` | Meridian text-embed folder used by `BruxosMeridianTextCond` | [Bruxos do VFX — Meridian repository](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main) |
+| MoGe | `moge_2_vitl_normal.safetensors` | MoGe model folder / pasta do MoGe | Select with `Load MoGe Model` |
 
-Requires:
+### Quality workflow model stack / Stack do workflow Quality
 
 ```text
-MiniMax H3 base model
-meridian_teacher_comfyui.safetensors
-meridian_turbo_comfyui.safetensors
-MiniMax H3 Video VAE
-MoGe
+MeridianH3Camera_int8_pruned.safetensors
+        ↓
+minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors
+        ↓
+meridian_dmd_lora_comfyui.safetensors
+        ↓
+Euler / CFG 1.0 / shift 3.0
 ```
 
-The **Teacher LoRA must be applied before the Turbo LoRA**.
+> **Recommended for final quality / Recomendado para qualidade final:**  
+> In our current tests, this converted Meridian INT8 workflow produces **better visual quality than the LoRA workflow**.  
+> Nos testes atuais, este workflow com Meridian INT8 convertido produz **melhor qualidade visual que o workflow LoRA**.
 
-A **Teacher LoRA deve ser aplicada antes da Turbo LoRA**.
+---
+
+## 🔵 LoRA workflow — official MiniMax H3 base
+
+The current Meridian release uses **two LoRA adapters over the unmodified MiniMax H3 FL2VA transformer**.
+
+A versão atual do Meridian usa **dois adaptadores LoRA sobre o transformer MiniMax H3 FL2VA sem modificação**.
+
+| Component / Componente | File / Arquivo | Folder / Pasta | Download |
+|---|---|---|---|
+| MiniMax H3 base — **required FL2VA base** | `minimax_h3_fl2va_bf16.safetensors` | `ComfyUI/models/diffusion_models/` | [Comfy-Org — FL2VA BF16](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors) |
+| Meridian Teacher LoRA | `meridian_teacher_lora.safetensors` | `ComfyUI/models/loras/` | [Viggle Meridian — ComfyUI adapters](https://huggingface.co/Viggle/Meridian/tree/main/comfyui) |
+| Meridian Turbo LoRA | `meridian_turbo_lora.safetensors` | `ComfyUI/models/loras/` | [Viggle Meridian — ComfyUI adapters](https://huggingface.co/Viggle/Meridian/tree/main/comfyui) |
+| Meridian fixed embeddings / assets | `fixed_embed_<frames>.pt` / converted `.safetensors` when used by the Bruxos node | Meridian assets / text-cond folder | [Viggle Meridian — assets](https://huggingface.co/Viggle/Meridian/tree/main/assets) |
+| H3 Video VAE | `minimax_h3_video_vae_fp16.safetensors` or `minimax_h3_video_vae_int8_convrot.safetensors` | `ComfyUI/models/vae/` | [Comfy-Org — VAE](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae) |
+| MoGe | `moge_2_vitl_normal.safetensors` | MoGe model folder / pasta do MoGe | Select with `Load MoGe Model` |
+
+### LoRA loading order / Ordem das LoRAs
+
+```text
+minimax_h3_fl2va_bf16.safetensors
+        ↓
+meridian_teacher_lora.safetensors   strength 1.0
+        ↓
+meridian_turbo_lora.safetensors     strength 1.0
+        ↓
+Euler / CFG 1.0 / MiniMax H3 shift 3.0
+```
+
+**Teacher must be loaded before Turbo. Do not run Turbo alone.**  
+**A Teacher deve ser carregada antes da Turbo. Não use a Turbo sozinha.**
+
+The official Meridian LoRA release was trained for the H3 **FL2VA** base. The H3 `ref2va` checkpoint is not the intended base for these adapters.
+
+A versão oficial LoRA do Meridian foi treinada para a base H3 **FL2VA**. O checkpoint H3 `ref2va` não é a base prevista para esses adaptadores.
+
+---
+
+## 📥 Useful direct links / Links úteis
+
+- **Bruxos Meridian INT8 repository:**  
+  https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main
+- **Meridian INT8 diffusion model folder:**  
+  https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main/diffusion_models/H3camera
+- **Meridian DMD LoRA:**  
+  https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/blob/main/lora/meridian_dmd_lora_comfyui.safetensors
+- **Official Meridian LoRA release:**  
+  https://huggingface.co/Viggle/Meridian/tree/main/comfyui
+- **Official Meridian assets:**  
+  https://huggingface.co/Viggle/Meridian/tree/main/assets
+- **MiniMax H3 FL2VA BF16:**  
+  https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors
+- **MiniMax H3 VAE files:**  
+  https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae
+- **H3 3-step LoRA used by the Quality workflow:**  
+  https://huggingface.co/Kijai/MiniMax-H3_comfy/tree/main/loras
 
 ---
 
@@ -706,11 +770,11 @@ MeridianBruxos_v3_Quality.json
 MeridianBruxos_v3_lora.json
 ```
 
-### `MeridianBruxos_v3_Quality.json`
+### `Minimax_bruxosdovfx_CameraMeridian_v3.json` / Quality workflow
 
-Uses the converted **Meridian INT8 diffusion model**.
+Uses the converted **Meridian INT8 diffusion model**, MoGe geometry, `bruxosdovfx • Camera H3`, `BruxosMeridianReference`, an extra image reference slot and the H3 frame-grid helper.
 
-Usa o **modelo diffusion Meridian INT8 convertido**.
+Usa o **modelo diffusion Meridian INT8 convertido**, geometria MoGe, `bruxosdovfx • Camera H3`, `BruxosMeridianReference`, referência extra de imagem e o helper de frame-grid do H3.
 
 **Recommended when final visual quality is the priority.**  
 **Recomendado quando a prioridade é a qualidade visual final.**

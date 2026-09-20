@@ -1,4 +1,4 @@
-# Meridian Camera H3 — by Bruxos do VFX
+# H3 Camera Control v3 — by Bruxos do VFX
 
 **Depth-based camera re-control for MiniMax H3 + Viggle Meridian inside ComfyUI.**  
 **Recâmera baseada em profundidade para MiniMax H3 + Viggle Meridian dentro do ComfyUI.**

@@ -3,365 +3,160 @@
 **Depth-based camera re-control for MiniMax H3 + Viggle Meridian inside ComfyUI.**  
 **Recâmera baseada em profundidade para MiniMax H3 + Viggle Meridian dentro do ComfyUI.**
 
-> Create a new camera movement from an existing video using **MoGe depth**, **Camera H3** and **Meridian**.  
-> Crie um novo movimento de câmera a partir de um vídeo existente usando **profundidade MoGe**, **Camera H3** e **Meridian**.
+> Create new camera motion from an existing video using **MoGe + Camera H3 + Meridian**.  
+> Crie um novo movimento de câmera a partir de um vídeo existente usando **MoGe + Camera H3 + Meridian**.
 
 > This is not an official MiniMax or Viggle release.  
 > Este não é um lançamento oficial da MiniMax ou Viggle.
 
 <img width="581" height="1435" alt="image" src="https://github.com/user-attachments/assets/1cdaef43-e001-45be-acd7-9dd884840d7f" />
 
----
-
-## ✨ What is it? / O que é?
-
-
 https://github.com/user-attachments/assets/3c958ca8-9685-440c-afc3-52da9d1f7143
 
-**Meridian Camera H3** connects the camera tools from **bruxosdovfx · Camera H3** with **Viggle Meridian**.
+---
 
-The source video is converted into geometry with **MoGe**, the Camera H3 node reprojects the scene from a new virtual camera, and Meridian uses this warped video as the camera guide for the final generation.
+## ✨ How it works / Como funciona
 
-**Meridian Camera H3** conecta as ferramentas de câmera do **bruxosdovfx · Camera H3** ao **Viggle Meridian**.
+The source video is converted to geometry with **MoGe**.  
+**Camera H3** reprojects it from a new virtual camera and creates the Meridian Depth Warp.  
+Meridian uses that warped video as the camera guide for the final generation.
 
-O vídeo original é convertido em geometria com **MoGe**, o Camera H3 reprojeta a cena a partir de uma nova câmera virtual e o Meridian usa esse vídeo reprojetado como guia para gerar o resultado final.
+O vídeo original é convertido em geometria com **MoGe**.  
+O **Camera H3** reprojeta a cena a partir de uma nova câmera virtual e cria o Depth Warp do Meridian.  
+O Meridian usa esse vídeo reprojetado como guia para a geração final.
 
 ```text
 Source Video
     ↓
 MoGe Geometry
     ↓
-Camera H3
-    ↓
-Depth Warp / New Camera View
+Camera H3 — Depth Warp
     ↓
 Meridian
-    ↓
-MiniMax H3 generation
     ↓
 Final Video
 ```
 
-**The camera motion comes from the Depth Warp, not from a text description.**  
-**O movimento de câmera vem do Depth Warp, não de uma descrição em texto.**
+**The camera comes from the Depth Warp — not from the text prompt.**  
+**A câmera vem do Depth Warp — não do prompt de texto.**
 
 ---
 
-# 🎥 Two workflows / Dois workflows
+## 🎥 Two workflows / Dois workflows
 
-The repository includes **two Meridian workflows**.
+| Workflow | Base | Use / Uso |
+|---|---|---|
+| **Meridian INT8 — Quality** | Converted Meridian INT8 diffusion model | **Best visual quality in our current tests** / **Melhor qualidade visual nos testes atuais** |
+| **Meridian LoRA — H3 Base** | MiniMax H3 FL2VA + Meridian Teacher + Turbo | Lighter and keeps the standard H3 base / Mais leve e mantém a base H3 padrão |
 
-O repositório inclui **dois workflows do Meridian**.
+### 🟣 Meridian INT8 — Quality
 
-| Workflow | Base | Main advantage / Principal vantagem | Recommended for / Recomendado para |
-|---|---|---|---|
-| **Meridian INT8 — Quality** | Converted Meridian INT8 diffusion model | **Best quality in our current tests** / **Melhor qualidade nos testes atuais** | Final renders / renders finais |
-| **Meridian LoRA — Standard H3** | Official MiniMax H3 `FL2VA` base + Meridian Teacher + Turbo LoRAs | Keeps the original H3 base and the official Meridian adapter structure / Mantém a base H3 original e a estrutura oficial de adaptadores do Meridian | Lighter setup, compatibility and experimentation / setup mais leve, compatibilidade e experimentação |
+Uses the converted Meridian model, DMD LoRA and H3 3-step LoRA.  
+Usa o modelo Meridian convertido, DMD LoRA e H3 3-step LoRA.
 
----
-
-## 🟣 Workflow 1 — Meridian INT8 / Quality
-
-### Recommended for best image quality  
-### Recomendado para melhor qualidade de imagem
-
-This workflow uses a **converted Meridian diffusion model** prepared for ComfyUI and quantized to INT8.
-
-Este workflow usa um **modelo diffusion do Meridian convertido** para ComfyUI e quantizado em INT8.
-
-```text
-Source Video
-    ↓
-MoGe
-    ↓
-Camera H3 — Meridian Depth Warp
-    ↓
-Meridian Reference
-    ↓
-Meridian INT8 model
-    ↓
-Meridian DMD LoRA
-    ↓
-H3 3-step LoRA
-    ↓
-Euler Sampler
-    ↓
-H3 Video VAE
-    ↓
-Video
-```
-
-
+**Recommended when final image quality is the priority.**  
+**Recomendado quando a prioridade é a qualidade final.**
 
 https://github.com/user-attachments/assets/dd73c770-727b-4b9a-9833-e4651eb7f8df
 
+### 🔵 Meridian LoRA — H3 Base
 
+Uses the original **MiniMax H3 FL2VA** base with the official Meridian **Teacher → Turbo** adapters.
 
-### Why use it? / Por que usar?
+Usa a base original **MiniMax H3 FL2VA** com os adaptadores oficiais Meridian **Teacher → Turbo**.
 
-- **Best quality of the two workflows in our current tests**
-- More faithful Meridian behavior
-- Dedicated Meridian diffusion weights
-- Good choice for final renders
-
-- **Melhor qualidade entre os dois workflows nos testes atuais**
-- Comportamento mais próximo do Meridian dedicado
-- Pesos diffusion específicos do Meridian
-- Melhor opção para render final
-
-### Main model / Modelo principal
-
-```text
-MeridianH3Camera_int8_pruned.safetensors
-```
-
-Place it in:
-
-```text
-ComfyUI/models/diffusion_models/H3camera/
-```
-
-This workflow also uses:
-
-```text
-meridian_dmd_lora_comfyui.safetensors
-minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors
-minimax_h3_video_vae_int8_convrot.safetensors
-meridian_fixed_embed_<frames>.safetensors
-```
+> Teacher must be loaded before Turbo. Do not use Turbo alone.  
+> A Teacher deve ser carregada antes da Turbo. Não use a Turbo sozinha.
 
 ---
 
-## 🔵 Workflow 2 — Meridian LoRA / Standard H3
+## 📦 Requirements / Requisitos
 
-### Lighter and more flexible  
-### Mais leve e mais flexível
+All models and custom nodes used by both workflows are listed here.  
+Todos os modelos e custom nodes usados pelos dois workflows estão nesta tabela.
 
-This workflow keeps the **official MiniMax H3 FL2VA transformer** as the base and applies the two official Meridian adapters on top of it.
+| Type | Workflow | Model / Node | Link | Function / Função | Local |
+|---|---|---|---|---|---|
+| **Model** | Quality | `MeridianH3Camera_int8_pruned.safetensors` | [Download](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main/diffusion_models/H3camera) | Converted Meridian INT8 model / Modelo Meridian INT8 convertido | `models/diffusion_models/H3camera/` |
+| **LoRA** | Quality | `meridian_dmd_lora_comfyui.safetensors` | [Download](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/blob/main/lora/meridian_dmd_lora_comfyui.safetensors) | Meridian DMD acceleration | `models/loras/` |
+| **LoRA** | Quality | `minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors` | [Download](https://huggingface.co/Kijai/MiniMax-H3_comfy/tree/main/loras) | H3 3-step acceleration / Aceleração H3 em 3 steps | `models/loras/minimax/` |
+| **Text Embed** | Quality | `meridian_fixed_embed_<frames>.safetensors` | [Download](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main) | Fixed Meridian conditioning / Conditioning fixo do Meridian | Meridian text-cond folder |
+| **Model** | LoRA | `minimax_h3_fl2va_bf16.safetensors` | [Download](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors) | Official H3 FL2VA base / Base oficial H3 FL2VA | `models/diffusion_models/Minimax/` |
+| **LoRA** | LoRA | `meridian_teacher_lora.safetensors` | [Download](https://huggingface.co/Viggle/Meridian/tree/main/comfyui) | Meridian camera teacher adapter | `models/loras/` |
+| **LoRA** | LoRA | `meridian_turbo_lora.safetensors` | [Download](https://huggingface.co/Viggle/Meridian/tree/main/comfyui) | Meridian turbo adapter | `models/loras/` |
+| **Text Encoder** | LoRA* | `qwen3vl_32b_minimax_h3_int8_convrot.safetensors` | [Download](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/text_encoders) | H3 text encoder for editable prompts/references / Text encoder para prompts e referências | `models/text_encoders/` |
+| **VAE** | Both | `minimax_h3_video_vae_int8_convrot.safetensors` | [Download](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae) | H3 Video VAE | `models/vae/Minimax/` |
+| **Depth** | Both | `moge_2_vitl_normal.safetensors` | [MoGe](https://github.com/microsoft/MoGe) | Geometry/depth estimation / Estimativa de geometria e profundidade | Select in `Load MoGe Model` |
+| **Custom Node** | Both | **Camera H3 — Bruxos do VFX** | [GitHub](https://github.com/NyckM/3d-Camera-control-H3-Minimax) | Camera editor, Depth Warp and Meridian Reference / Editor de câmera, Depth Warp e Meridian Reference | `custom_nodes/` |
+| **Custom Node** | Both | **Bruxos do VFX H3 Frames** | [GitHub](https://github.com/NyckM/Minimax-h3) | Valid H3 frame grid / Grade válida de frames H3 | `custom_nodes/` |
+| **Custom Node** | Both | **Bruxos do VFX Compare** | [GitHub](https://github.com/NyckM/Video-Util-ComfYUI) | Video comparison / Comparação de vídeo | `custom_nodes/` |
+| **Custom Node** | Both | **ComfyUI-Custom-Scripts** | [GitHub](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) | `ShowText` / relatório | `custom_nodes/` |
+| **Custom Node** | Both | **ComfyUI-Pixaroma** | [GitHub](https://github.com/pixaroma/ComfyUI-Pixaroma) | Workflow labels / Labels visuais | `custom_nodes/` |
 
-Este workflow mantém o **transformer oficial MiniMax H3 FL2VA** como base e aplica sobre ele os dois adaptadores oficiais do Meridian.
+\* The Qwen text encoder is needed when using the editable H3 text/reference path.  
+\* O Qwen text encoder é necessário quando você usa o caminho editável de texto/referências do H3.
 
-```text
-Standard MiniMax H3
-    ↓
-Meridian Teacher LoRA
-    ↓
-Meridian Turbo LoRA
-    ↓
-Camera H3 Depth Warp
-    ↓
-Meridian conditioning
-    ↓
-H3 generation
-```
+### Main download repositories / Repositórios principais
 
-Official base for the LoRA workflow / Base oficial para o workflow LoRA:
-
-```text
-minimax_h3_fl2va_bf16.safetensors
-```
-
-> **Important / Importante:** use the **FL2VA** base for the official Meridian LoRAs. Do not use the H3 `ref2va` checkpoint as the base for these adapters.  
-> Use a base **FL2VA** para as LoRAs oficiais do Meridian. Não use o checkpoint H3 `ref2va` como base desses adaptadores.
-
-Meridian adapters:
-
-```text
-meridian_teacher_lora.safetensors
-meridian_turbo_lora.safetensors
-```
-
-### Why use it? / Por que usar?
-
-Because the original **H3 transformer remains the base**, this version is better suited to workflows that need the normal H3 ecosystem.
-
-Como o **transformer original do H3 continua sendo a base**, esta versão é mais indicada para workflows que precisam manter o ecossistema normal do H3.
-
-It can preserve access to:
-
-- H3 text prompting
-- H3 image references
-- Multiple references
-- Existing H3 models
-- Existing H3 LoRAs and workflow structures
-
-Ela pode preservar acesso a:
-
-- prompts de texto do H3
-- referências de imagem do H3
-- múltiplas referências
-- modelos H3 existentes
-- estruturas e LoRAs já usadas no H3
-
-> **Quality note / Nota de qualidade:**  
-> The LoRA workflow is more flexible, but the **Meridian INT8 / Quality workflow currently produces better visual quality** in our tests.  
-> O workflow LoRA é mais flexível, mas o **Meridian INT8 / Quality atualmente entrega melhor qualidade visual** em nossos testes.
+- [Bruxos do VFX — Meridian INT8 build](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main)
+- [Viggle — Meridian](https://huggingface.co/Viggle/Meridian)
+- [Comfy-Org — MiniMax H3](https://huggingface.co/Comfy-Org/MiniMax-H3)
+- [Kijai — MiniMax H3](https://huggingface.co/Kijai/MiniMax-H3_comfy)
 
 ---
 
-# 🧭 Camera H3
+## 🧭 Camera H3 + Depth Warp
 
-The camera movement is created with:
+Set:
 
 ```text
-bruxosdovfx · Camera H3
+depth_animation = Depth Warp
+warp_format = Meridian (H3)
 ```
 
-Repository:
+`<Video 1>` is the original source video.  
+`<Video 2>` is the Depth Warp generated by Camera H3.
 
-https://github.com/NyckM/3d-Camera-control-H3-Minimax
+`<Video 1>` é o vídeo original.  
+`<Video 2>` é o Depth Warp gerado pelo Camera H3.
 
-The Camera H3 node defines the virtual camera trajectory used to build the Meridian guide.
+Gray areas are parts of the scene that were not visible from the source camera and must be reconstructed by Meridian/H3.
 
-O Camera H3 define a trajetória da câmera virtual usada para construir o guia do Meridian.
+As áreas cinzas são regiões que não eram visíveis na câmera original e precisam ser reconstruídas pelo Meridian/H3.
 
 ### Main controls / Controles principais
 
-| Control | Function / Função |
+| Control | Use / Uso |
 |---|---|
-| `camera_trajectory` | Camera keyframes / keyframes da câmera |
-| `subject_box` | Defines the subject used as orbit target / define o sujeito usado como alvo da órbita |
-| `warp_hfov` | Source camera horizontal FOV / FOV horizontal da câmera original |
-| `warp_pivot_depth` | Manual orbit depth pivot / pivô manual de profundidade |
-| `warp_offset_azimuth` | Starts the new camera from a different horizontal angle / inicia a câmera em outro ângulo horizontal |
-| `warp_offset_elevation` | Initial vertical offset / offset vertical inicial |
-| `warp_offset_distance` | Camera distance multiplier / multiplicador da distância |
-| `warp_hold_at` | Frame where the action freezes / frame em que a ação congela |
-| `warp_hold_frames` | Number of frozen frames while the camera continues / quantidade de frames congelados enquanto a câmera continua |
-| `warp_format` | Use `Meridian (H3)` |
+| `camera_trajectory` | Camera keyframes / Keyframes da câmera |
+| `subject_box` | Orbit target / Alvo da órbita |
+| `warp_hfov` | Source camera FOV / FOV da câmera original |
+| `warp_pivot_depth` | Orbit depth pivot / Pivô de profundidade |
+| `warp_offset_azimuth` | Horizontal starting offset |
+| `warp_offset_elevation` | Vertical starting offset |
+| `warp_offset_distance` | Camera distance |
+| `warp_hold_at` + `warp_hold_frames` | Bullet-time hold / Congela a ação enquanto a câmera continua |
 
 ---
 
-# 🧊 Depth Warp
+## ⏱ Frames and settings / Frames e configurações
 
-**Depth Warp** is the bridge between Camera H3 and Meridian.
-
-O **Depth Warp** é a ponte entre o Camera H3 e o Meridian.
-
-It takes the source image/video and its depth information and reprojects the scene according to the new camera trajectory.
-
-Ele recebe a imagem/vídeo original e sua profundidade e reprojeta a cena de acordo com a nova trajetória de câmera.
+Supported Meridian lengths:
 
 ```text
-Source frame
-+
-Depth / Geometry
-+
-Camera trajectory
+73 · 90 · 107 · 124 · 141 · 158 · 175 · 243
+```
+
+For the **Quality / fixed-embedding workflow**, these values must match:
+
+```text
+frame count
 =
-Warped frame from the new camera
-```
-
-Areas that were never visible to the original camera become **neutral gray**.
-
-Áreas que nunca foram vistas pela câmera original ficam em **cinza neutro**.
-
-Those missing regions are later reconstructed by Meridian/H3.
-
-Essas regiões ausentes são reconstruídas depois pelo Meridian/H3.
-
-### Depth source / Fonte de profundidade
-
-Recommended:
-
-```text
-MoGe
-```
-
-Model:
-
-```text
-moge_2_vitl_normal.safetensors
-```
-
-Typical workflow:
-
-```text
-Load MoGe Model
-    ↓
-MoGe Inference
-    ↓
-Camera H3.moge_geometry
-```
-
----
-
-# 🧩 Meridian Reference
-
-`bruxosdovfx · Meridian Reference` prepares the source video, warped video, references and latent conditioning expected by Meridian.
-
-`bruxosdovfx · Meridian Reference` prepara o vídeo original, o vídeo reprojetado, referências e conditioning latent usado pelo Meridian.
-
-Conceptually:
-
-```text
-<Video 1> = original source video
-<Video 2> = Camera H3 Depth Warp
-```
-
-The **second video is the new-camera guide**.
-
-O **segundo vídeo é o guia da nova câmera**.
-
-Additional image references can also be connected depending on the workflow.
-
-Referências extras de imagem também podem ser conectadas dependendo do workflow.
-
----
-
-# 🖼 References / Referências
-
-The LoRA workflow is especially useful when you want to keep the normal H3 reference system.
-
-O workflow LoRA é especialmente útil quando você quer manter o sistema normal de referências do H3.
-
-Possible references include:
-
-```text
-<Picture 1>
-<Picture 2>
-...
-<Picture 9>
-
-<Video 1>
-<Video 2>
-<Video 3>
-```
-
-In Meridian:
-
-```text
-<Video 1> = source video
-<Video 2> = depth-warp camera guide
-```
-
----
-
-# ⏱ Frame lengths / Quantidade de frames
-
-Supported Meridian frame counts:
-
-```text
-73
-90
-107
-124
-141
-158
-175
-243
-```
-
-These values must match across the workflow:
-
-```text
-frame_load_cap
-=
-warp_length
+warp length
 =
 Meridian Reference length
 =
-text embedding frame count
+fixed text embedding length
 ```
 
 Example:
@@ -376,471 +171,60 @@ Example:
 meridian_fixed_embed_124.safetensors
 ```
 
-If the lengths do not match, the conditioning will not represent the intended Meridian sequence correctly.
-
-Se as durações não coincidirem, o conditioning não representará corretamente a sequência esperada pelo Meridian.
-
----
-
-# ⚙️ Recommended settings / Configurações recomendadas
+Recommended / Recomendado:
 
 | Setting | Value |
 |---|---|
 | FPS | `24` |
 | Sampler | `Euler` |
 | CFG | `1.0` |
-| H3 Sigma Shift | `3.0 / 3.0` |
+| MiniMax H3 shift | `3.0 / 3.0` |
 | DMD sigmas | `1.0, 0.8571428571428571, 0.6, 0.0` |
 | Warp format | `Meridian (H3)` |
-| Warp reference resolution | around `832 × 480` |
-| Generation resolution | around `1344 × 768` |
-
-For faster testing, start with:
-
-```text
-73 frames
-```
-
-For a common working setup:
-
-```text
-124 frames
-```
+| Typical output | around `1344 × 768` |
 
 ---
 
-# 📦 Models / Modelos
+## 🔧 Basic use / Uso básico
 
-## Download hub / Central de downloads
+1. Load the source video at **24 fps**. / Carregue o vídeo original em **24 fps**.
+2. Run **MoGe** geometry estimation. / Gere a geometria com **MoGe**.
+3. Create the camera path in **Camera H3**. / Crie a trajetória no **Camera H3**.
+4. Enable **Depth Warp → Meridian (H3)** and check the preview. / Ative **Depth Warp → Meridian (H3)** e confira o preview.
+5. Choose **Quality INT8** or **LoRA H3** and generate. / Escolha **Quality INT8** ou **LoRA H3** e gere.
 
-### Bruxos do VFX — Meridian INT8 build
-
-https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main
-
-### Official Viggle Meridian / Meridian oficial
-
-https://huggingface.co/Viggle/Meridian
-
-### Comfy-Org MiniMax H3
-
-https://huggingface.co/Comfy-Org/MiniMax-H3
+> If the Depth Warp geometry is already wrong, the final model receives a bad camera guide.  
+> Se a geometria do Depth Warp já estiver errada, o modelo final receberá um guia de câmera incorreto.
 
 ---
 
-## 🟣 Quality workflow — converted Meridian INT8
+## ⚠️ Limitations / Limitações
 
-| Component / Componente | File / Arquivo | Folder / Pasta | Download |
-|---|---|---|---|
-| Meridian INT8 diffusion model | `MeridianH3Camera_int8_pruned.safetensors` | `ComfyUI/models/diffusion_models/H3camera/` | [Bruxos do VFX — diffusion_models](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main/diffusion_models/H3camera) |
-| Meridian DMD LoRA | `meridian_dmd_lora_comfyui.safetensors` | `ComfyUI/models/loras/` | [Bruxos do VFX — LoRA](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/blob/main/lora/meridian_dmd_lora_comfyui.safetensors) |
-| H3 3-step LoRA | `minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors` | `ComfyUI/models/loras/` | [Kijai — MiniMax-H3 LoRAs](https://huggingface.co/Kijai/MiniMax-H3_comfy/tree/main/loras) |
-| H3 Video VAE INT8 | `minimax_h3_video_vae_int8_convrot.safetensors` | `ComfyUI/models/vae/` | [Comfy-Org — VAE](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae) |
-| Meridian fixed text embed | `meridian_fixed_embed_<frames>.safetensors` | Meridian text-embed folder used by `BruxosMeridianTextCond` | [Bruxos do VFX — Meridian repository](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main) |
-| MoGe | `moge_2_vitl_normal.safetensors` | MoGe model folder / pasta do MoGe | Select with `Load MoGe Model` |
-
-### Quality workflow model stack / Stack do workflow Quality
-
-```text
-MeridianH3Camera_int8_pruned.safetensors
-        ↓
-minimax_h3_taomate_3step_lora_avg_rank_19_bf16.safetensors
-        ↓
-meridian_dmd_lora_comfyui.safetensors
-        ↓
-Euler / CFG 1.0 / shift 3.0
-```
-
-> **Recommended for final quality / Recomendado para qualidade final:**  
-> In our current tests, this converted Meridian INT8 workflow produces **better visual quality than the LoRA workflow**.  
-> Nos testes atuais, este workflow com Meridian INT8 convertido produz **melhor qualidade visual que o workflow LoRA**.
+- Large camera changes expose more unseen geometry and can become unstable. / Mudanças grandes de câmera revelam mais geometria ausente e podem ficar instáveis.
+- Incorrect depth produces incorrect reprojection. / Profundidade incorreta gera reprojeção incorreta.
+- Source-camera motion is harder than a locked shot. / Movimento na câmera original é mais difícil que plano travado.
+- Depth Warp is a control signal; the final reconstruction is generated by Meridian/H3. / O Depth Warp é um sinal de controle; a reconstrução final é gerada pelo Meridian/H3.
 
 ---
 
-## 🔵 LoRA workflow — official MiniMax H3 base
+## 📜 License / Licença
 
-The current Meridian release uses **two LoRA adapters over the unmodified MiniMax H3 FL2VA transformer**.
+This project integrates tools and workflows around **MiniMax H3** and **Viggle Meridian**. Model weights remain subject to the licenses of their original authors.
 
-A versão atual do Meridian usa **dois adaptadores LoRA sobre o transformer MiniMax H3 FL2VA sem modificação**.
+Este projeto integra ferramentas e workflows ao redor do **MiniMax H3** e **Viggle Meridian**. Os pesos continuam sujeitos às licenças de seus autores originais.
 
-| Component / Componente | File / Arquivo | Folder / Pasta | Download |
-|---|---|---|---|
-| MiniMax H3 base — **required FL2VA base** | `minimax_h3_fl2va_bf16.safetensors` | `ComfyUI/models/diffusion_models/` | [Comfy-Org — FL2VA BF16](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors) |
-| Meridian Teacher LoRA | `meridian_teacher_lora.safetensors` | `ComfyUI/models/loras/` | [Viggle Meridian — ComfyUI adapters](https://huggingface.co/Viggle/Meridian/tree/main/comfyui) |
-| Meridian Turbo LoRA | `meridian_turbo_lora.safetensors` | `ComfyUI/models/loras/` | [Viggle Meridian — ComfyUI adapters](https://huggingface.co/Viggle/Meridian/tree/main/comfyui) |
-| Meridian fixed embeddings / assets | `fixed_embed_<frames>.pt` / converted `.safetensors` when used by the Bruxos node | Meridian assets / text-cond folder | [Viggle Meridian — assets](https://huggingface.co/Viggle/Meridian/tree/main/assets) |
-| H3 Video VAE | `minimax_h3_video_vae_fp16.safetensors` or `minimax_h3_video_vae_int8_convrot.safetensors` | `ComfyUI/models/vae/` | [Comfy-Org — VAE](https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae) |
-| MoGe | `moge_2_vitl_normal.safetensors` | MoGe model folder / pasta do MoGe | Select with `Load MoGe Model` |
+Read the current MiniMax H3, Viggle Meridian and third-party node licenses before commercial use or redistribution.
 
-### LoRA loading order / Ordem das LoRAs
-
-```text
-minimax_h3_fl2va_bf16.safetensors
-        ↓
-meridian_teacher_lora.safetensors   strength 1.0
-        ↓
-meridian_turbo_lora.safetensors     strength 1.0
-        ↓
-Euler / CFG 1.0 / MiniMax H3 shift 3.0
-```
-
-**Teacher must be loaded before Turbo. Do not run Turbo alone.**  
-**A Teacher deve ser carregada antes da Turbo. Não use a Turbo sozinha.**
-
-The official Meridian LoRA release was trained for the H3 **FL2VA** base. The H3 `ref2va` checkpoint is not the intended base for these adapters.
-
-A versão oficial LoRA do Meridian foi treinada para a base H3 **FL2VA**. O checkpoint H3 `ref2va` não é a base prevista para esses adaptadores.
+Leia as licenças atuais do MiniMax H3, Viggle Meridian e dos nodes de terceiros antes de uso comercial ou redistribuição.
 
 ---
 
-## 📥 Useful direct links / Links úteis
+## 🧙 Bruxos do VFX
 
-- **Bruxos Meridian INT8 repository:**  
-  https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main
-- **Meridian INT8 diffusion model folder:**  
-  https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main/diffusion_models/H3camera
-- **Meridian DMD LoRA:**  
-  https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/blob/main/lora/meridian_dmd_lora_comfyui.safetensors
-- **Official Meridian LoRA release:**  
-  https://huggingface.co/Viggle/Meridian/tree/main/comfyui
-- **Official Meridian assets:**  
-  https://huggingface.co/Viggle/Meridian/tree/main/assets
-- **MiniMax H3 FL2VA BF16:**  
-  https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_fl2va_bf16.safetensors
-- **MiniMax H3 VAE files:**  
-  https://huggingface.co/Comfy-Org/MiniMax-H3/tree/main/vae
-- **H3 3-step LoRA used by the Quality workflow:**  
-  https://huggingface.co/Kijai/MiniMax-H3_comfy/tree/main/loras
-
----
-
-# 🧱 Custom nodes / Custom nodes necessários
-
-## Required / Necessários
-
-### Camera H3
-
-```text
-NyckM/3d-Camera-control-H3-Minimax
-```
-
-https://github.com/NyckM/3d-Camera-control-H3-Minimax
-
-Used for:
-
-- camera trajectory
-- subject orbit
-- depth warp
-- Meridian warp format
-- camera offsets
-- bullet-time hold
-
-Usado para:
-
-- trajetória de câmera
-- órbita em torno do sujeito
-- depth warp
-- formato Meridian
-- offsets de câmera
-- congelamento de ação / bullet time
-
-### Bruxos do VFX Nodes
-
-https://github.com/NyckM/Bruxos-do-VFX-Nodes
-
-Used for video loading and Bruxos workflow utilities.
-
-Usado para carregamento de vídeo e utilidades dos workflows Bruxos.
-
-### ComfyUI / MoGe
-
-The workflow uses the ComfyUI MoGe implementation for geometry estimation.
-
-O workflow usa a implementação MoGe do ComfyUI para estimativa de geometria.
-
----
-
-## Optional / Opcionais
-
-### ComfyUI Custom Scripts
-
-https://github.com/pythongosssss/ComfyUI-Custom-Scripts
-
-Used by:
-
-```text
-ShowText|pysssss
-```
-
-Only displays reports and debug information.
-
-Serve apenas para exibir relatórios e informações de debug.
-
-### Pixaroma
-
-https://github.com/pixaroma/ComfyUI-Pixaroma
-
-Used only for visual workflow labels.
-
-Usado apenas para os labels visuais do workflow.
-
-It can be removed without changing the generation.
-
-Pode ser removido sem alterar a geração.
-
----
-
-# 🔧 Basic workflow setup / Configuração básica
-
-## 1. Load the source video / Carregue o vídeo
-
-Use:
-
-```text
-24 FPS
-```
-
-The input can be a static-camera shot or a moving sequence, but strong source-camera motion can make depth reprojection less predictable.
-
-A entrada pode ser um plano travado ou uma sequência em movimento, mas movimentos fortes da câmera original podem tornar a reprojeção de profundidade menos previsível.
-
----
-
-## 2. Estimate geometry / Estime a geometria
-
-```text
-Video
-↓
-MoGe Inference
-```
-
-MoGe estimates the geometry used by the virtual camera.
-
-O MoGe estima a geometria usada pela câmera virtual.
-
----
-
-## 3. Create the new camera / Crie a nova câmera
-
-Use **Camera H3** to define:
-
-```text
-Azimuth
-Elevation
-Distance
-Subject pivot
-Timing
-```
-
-The camera path can contain multiple keyframes.
-
-A trajetória pode conter vários keyframes.
-
----
-
-## 4. Enable Meridian Depth Warp
-
-Set:
-
-```text
-depth_animation = Depth Warp
-warp_format = Meridian (H3)
-```
-
-Preview the warp before generation.
-
-Visualize o warp antes de gerar.
-
-If the geometry already looks wrong in the warp preview, Meridian will receive a bad camera guide.
-
-Se a geometria já estiver errada no preview do warp, o Meridian receberá um guia de câmera incorreto.
-
----
-
-## 5. Choose the engine / Escolha o engine
-
-### Maximum quality / Máxima qualidade
-
-Use:
-
-```text
-Meridian INT8 / Quality
-```
-
-### Standard H3 + Meridian / H3 padrão + Meridian
-
-Use:
-
-```text
-Meridian LoRA
-```
-
----
-
-## 6. Generate / Gere
-
-Keep:
-
-```text
-FPS = 24
-CFG = 1.0
-Sampler = Euler
-Shift = 3.0
-```
-
-Then decode with the H3 Video VAE and save the output.
-
-Depois faça o decode com o H3 Video VAE e salve o vídeo.
-
----
-
-# 🧠 Tips / Dicas
-
-### Start with small camera changes
-
-Meridian is more stable with moderate camera changes.
-
-O Meridian é mais estável com mudanças moderadas de câmera.
-
-Large angle changes expose more unseen areas and require more reconstruction.
-
-Mudanças grandes de ângulo revelam mais regiões que nunca apareceram no vídeo original e exigem mais reconstrução.
-
----
-
-### Use `subject_box`
-
-A correct `subject_box` gives Camera H3 a better orbit target.
-
-Um `subject_box` correto oferece ao Camera H3 um alvo de órbita melhor.
-
----
-
-### Check the gray areas
-
-Gray regions in the Depth Warp are expected.
-
-Regiões cinzas no Depth Warp são esperadas.
-
-They represent parts of the scene that were hidden from the original camera.
-
-Elas representam partes da cena que estavam escondidas da câmera original.
-
----
-
-### Use offsets to start from a new angle
-
-Example:
-
-```text
-warp_offset_azimuth = -25
-```
-
-This lets the first output frame already start from a different virtual camera angle.
-
-Isso permite que o primeiro frame já comece a partir de um ângulo virtual diferente.
-
----
-
-### Bullet time
-
-Use:
-
-```text
-warp_hold_at
-warp_hold_frames
-```
-
-The source action freezes while the virtual camera continues moving.
-
-A ação do vídeo congela enquanto a câmera virtual continua se movendo.
-
----
-
-# ⚠️ Limitations / Limitações
-
-- Depth Warp is a **camera control signal**, not the final render.
-- Missing geometry must still be generated by Meridian/H3.
-- Large camera changes may become unstable.
-- Incorrect depth produces incorrect reprojection.
-- Handheld/source-camera motion is harder than a locked camera.
-- Output quality still depends on the H3/Meridian model, source video and references.
-
-- O Depth Warp é um **sinal de controle de câmera**, não o render final.
-- Geometria ausente ainda precisa ser criada pelo Meridian/H3.
-- Mudanças grandes de câmera podem ficar instáveis.
-- Profundidade incorreta gera reprojeção incorreta.
-- Vídeos com câmera original em movimento são mais difíceis que planos travados.
-- A qualidade final ainda depende do modelo H3/Meridian, vídeo fonte e referências.
-
----
-
-# 📁 Included workflows / Workflows incluídos
-
-```text
-MeridianBruxos_v3_Quality.json
-MeridianBruxos_v3_lora.json
-```
-
-### `Minimax_bruxosdovfx_CameraMeridian_v3.json` / Quality workflow
-
-Uses the converted **Meridian INT8 diffusion model**, MoGe geometry, `bruxosdovfx • Camera H3`, `BruxosMeridianReference`, an extra image reference slot and the H3 frame-grid helper.
-
-Usa o **modelo diffusion Meridian INT8 convertido**, geometria MoGe, `bruxosdovfx • Camera H3`, `BruxosMeridianReference`, referência extra de imagem e o helper de frame-grid do H3.
-
-**Recommended when final visual quality is the priority.**  
-**Recomendado quando a prioridade é a qualidade visual final.**
-
-### `MeridianBruxos_v3_lora.json`
-
-Uses a **standard MiniMax H3 model + Meridian Teacher/Turbo LoRAs**.
-
-Usa um **modelo MiniMax H3 padrão + LoRAs Meridian Teacher/Turbo**.
-
-**Recommended when H3 compatibility, prompts and references are the priority.**  
-**Recomendado quando compatibilidade com H3, prompts e referências são prioridade.**
-
----
-
-# 📜 License / Licença
-
-This project integrates tools and workflows around **MiniMax H3** and **Viggle Meridian**.
-
-Este projeto integra ferramentas e workflows ao redor do **MiniMax H3** e **Viggle Meridian**.
-
-The model weights remain subject to the licenses of their original authors.
-
-Os pesos dos modelos continuam sujeitos às licenças de seus autores originais.
-
-Before commercial use or redistribution, read the current licenses and notices for:
-
-- MiniMax H3
-- Viggle Meridian
-- any redistributed or converted model weights
-- third-party custom nodes
-
-Antes de uso comercial ou redistribuição, consulte as licenças atuais de:
-
-- MiniMax H3
-- Viggle Meridian
-- quaisquer pesos convertidos ou redistribuídos
-- custom nodes de terceiros
-
----
-
-# 🧙 Bruxos do VFX
-
-Developed and adapted for ComfyUI by **Bruxos do VFX**.
-
+Developed and adapted for ComfyUI by **Bruxos do VFX**.  
 Desenvolvido e adaptado para ComfyUI por **Bruxos do VFX**.
 
-Camera H3:
-
-https://github.com/NyckM/3d-Camera-control-H3-Minimax
-
-Bruxos do VFX Nodes:
-
-https://github.com/NyckM/Bruxos-do-VFX-Nodes
-
-Meridian INT8 files:
-
-https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main
+- [Camera H3](https://github.com/NyckM/3d-Camera-control-H3-Minimax)
+- [H3 Frames](https://github.com/NyckM/Minimax-h3)
+- [Video Compare](https://github.com/NyckM/Video-Util-ComfYUI)
+- [Meridian INT8 models](https://huggingface.co/NyckM/Meridian_CameraH3_INT8_build_by_BruxosdoVFX/tree/main)

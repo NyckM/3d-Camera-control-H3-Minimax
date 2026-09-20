@@ -40,6 +40,13 @@ Final Video
 **The camera comes from the Depth Warp — not from the text prompt.**  
 **A câmera vem do Depth Warp — não do prompt de texto.**
 
+
+https://github.com/user-attachments/assets/c6544620-6048-4858-a6bb-b7230c614662
+
+https://github.com/user-attachments/assets/24a67c72-dfb9-43ac-ab57-59573f7b43bd
+
+
+
 ---
 
 ## 🎥 Two workflows / Dois workflows

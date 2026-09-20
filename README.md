@@ -91,6 +91,12 @@ H3 Video VAE
 Video
 ```
 
+
+
+https://github.com/user-attachments/assets/dd73c770-727b-4b9a-9833-e4651eb7f8df
+
+
+
 ### Why use it? / Por que usar?
 
 - **Best quality of the two workflows in our current tests**
